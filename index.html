@@ -277,6 +277,7 @@ function parseUnityPrefab(source){
    if(go&&(pos||rot||scale))transforms.push({id,gameObject:go[1],pos,rot,scale});
   }
  }
+ const transformById=new Map(transforms.map(t=>[t.id,t]));
  const mapped=[];
  for(const t of transforms){const name=objects.get(t.gameObject),boneName=unityBoneName(name);if(boneName)mapped.push({...t,name,boneName})}
  // Unity Prefab Variants store changes as target fileID + propertyPath pairs.
@@ -297,7 +298,23 @@ function parseUnityPrefab(source){
  const sourceGuids=[...new Set([...source.matchAll(/m_SourcePrefab:\s*\{fileID:\s*\d+,\s*guid:\s*([0-9a-f]{32})/g)].map(x=>x[1]))];
  const guids=[...new Set(overrides.map(x=>x.guid))];
  const variant=/m_SourcePrefab:\s*\{fileID:/m.test(source)||/PrefabInstance:/.test(source);
- return {mapped,transforms:transforms.length,mods:overrides.length,blend:blendOverrides.length,blendIndices,transformOverrides:transformOverrides.length,transformTargets:transformTargets.size,spring:spring.length,colliders:colliders.length,variant,sourceGuids,guids,overrides};
+ const resolved=[],unresolvedTargets=[];
+ for(const target of transformTargets){
+  const candidate=transformById.get(target);
+  if(!candidate){unresolvedTargets.push(target);continue}
+  const name=objects.get(candidate.gameObject),boneName=unityBoneName(name);
+  if(!boneName){unresolvedTargets.push(target);continue}
+  const item={...candidate,name,boneName};
+  for(const ov of transformOverrides.filter(x=>x.fileId===target)){
+   const match=ov.path.match(/^m_Local(Position|Rotation|Scale)\.([xyzw])$/);if(!match)continue;
+   const prop=match[1]==='Position'?'pos':match[1]==='Rotation'?'rot':'scale',idx={x:0,y:1,z:2,w:3}[match[2]];
+   if(!item[prop])item[prop]=prop==='rot'?[0,0,0,1]:prop==='scale'?[1,1,1]:[0,0,0];
+   const value=Number(ov.value);if(Number.isFinite(value))item[prop][idx]=value;
+  }
+  resolved.push(item);
+ }
+ for(const item of resolved)if(!mapped.some(x=>x.boneName===item.boneName))mapped.push(item);
+ return {mapped,transforms:transforms.length,mods:overrides.length,blend:blendOverrides.length,blendIndices,transformOverrides:transformOverrides.length,transformTargets:transformTargets.size,spring:spring.length,colliders:colliders.length,variant,sourceGuids,guids,overrides,resolvedTargets:resolved.length,unresolvedTargets:unresolvedTargets.length};
 }
 function preparePrefabTransform(item){
  const b=bone(item.boneName);if(!b)return null;
@@ -316,18 +333,27 @@ async function inspectPrefabFile(file){
  status.textContent='Reading Unity Prefab…';
  try{
   let source='',sourceLabel=file.name;
-  if(/\.zip$/i.test(file.name)){const zip=await JSZip.loadAsync(await file.arrayBuffer());const entries=Object.values(zip.files).filter(entry=>!entry.dir&&/\.prefab$/i.test(entry.name));if(!entries.length)throw new Error('No .prefab file was found inside this ZIP.');const entry=entries.find(x=>/chibi|rurune/i.test(x.name))||entries[0];source=await entry.async('string');sourceLabel=entry.name;}
+  if(/\.zip$/i.test(file.name)){
+   const zip=await JSZip.loadAsync(await file.arrayBuffer());
+   const entries=Object.values(zip.files).filter(entry=>!entry.dir&&/\.prefab$/i.test(entry.name));
+   if(!entries.length)throw new Error('No .prefab file was found inside this ZIP.');
+   const entry=entries.find(x=>/Chibi_rurune\.prefab$/i.test(x.name))||entries.find(x=>/chibi|rurune/i.test(x.name))||entries[0];
+   source=(await Promise.all(entries.map(async x=>'\\n# PREFAB SOURCE: '+x.name+'\\n'+await x.async('string')))).join('\\n');
+   sourceLabel=entry.name+' (scanned '+entries.length+' Prefab files)';
+  }
   else source=await file.text();
   if(!source.includes('%YAML')&&!source.includes('PrefabInstance:'))throw new Error('This does not look like a Unity text Prefab.');
   const parsed=parseUnityPrefab(source);importedPrefabData=parsed;
   const blendText=parsed.blendIndices.length?parsed.blendIndices.join(', '):'none';
   const sourceText=parsed.sourceGuids.length?parsed.sourceGuids.join(', '):'not declared';
-  summary.textContent='Named bone transforms: '+parsed.mapped.length+' / '+parsed.transforms+' standalone transforms\nUnity overrides: '+parsed.mods+' across '+parsed.guids.length+' source GUID(s)\nTransform overrides: '+parsed.transformOverrides+' on '+parsed.transformTargets+' Unity objects\nBlendShape overrides: '+parsed.blend+' (indices '+blendText+')\nSpring/PhysBone fields: '+parsed.spring+' · Collider fields: '+parsed.colliders+'\nSource Prefab GUID: '+sourceText;
+  summary.textContent='Auto-matched humanoid bones: '+parsed.mapped.length+' ('+(parsed.resolvedTargets||0)+' resolved Variant targets)\\nNamed transforms scanned: '+parsed.transforms+'\\nUnity overrides: '+parsed.mods+' across '+parsed.guids.length+' source GUID(s)\\nTransform overrides: '+parsed.transformOverrides+' on '+parsed.transformTargets+' targets ('+(parsed.unresolvedTargets||0)+' unresolved)\\nBlendShape overrides: '+parsed.blend+' (source indices '+blendText+')\\nSpring/PhysBone fields: '+parsed.spring+' · Collider fields: '+parsed.colliders+'\\nSource Prefab GUID: '+sourceText;
   if(parsed.mapped.length){
    status.textContent='Prefab loaded: '+sourceLabel+'. '+parsed.mapped.length+' named bone transform(s) can be mapped. Review before applying.';
    apply.disabled=!currentVRM;
+  }else if(parsed.variant&&parsed.mapped.length){
+   status.textContent='Auto-match found '+parsed.mapped.length+' humanoid bone candidate(s) in the scanned Prefab files. Review the result before applying. BlendShape indices are detected, but cannot be assigned to VRM morph names without source mesh metadata.';
   }else if(parsed.variant){
-   status.textContent='Analyzed '+sourceLabel+'. Its '+parsed.mods+' Unity overrides were read successfully, including '+parsed.blend+' BlendShape values. The target fileIDs still need the original Unity hierarchy to identify the correct bones and meshes. Nothing will be changed automatically; Apply stays disabled to protect your VRM.';
+   status.textContent='Analyzed '+sourceLabel+'. Unity overrides and BlendShape indices were detected, but no safe humanoid bone names could be resolved from the scanned Prefab hierarchies. No changes will be applied.';
   }else{
    status.textContent='No humanoid bone names could be mapped from this Prefab. No changes will be applied.';
   }
