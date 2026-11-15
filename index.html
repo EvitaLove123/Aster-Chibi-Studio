@@ -286,7 +286,7 @@ function appendBlendshapeCandidates(){
  const base=summary.dataset.baseSummary||summary.textContent;
  summary.dataset.baseSummary=base;
  const candidates=getBlendshapeCandidates(importedPrefabData.blendIndices);
- summary.textContent=base+(candidates.length?'\\nPossible VRM morph candidates (index only; verify source mesh):\\n'+candidates.join('\\n'):'\\nVRM morph candidates: load a model to inspect matching index positions.');
+ summary.textContent=base+(candidates.length?'\nPossible VRM morph candidates (index only; verify source mesh):\n'+candidates.join('\n'):'\nVRM morph candidates: load a model to inspect matching index positions.');
 }
 function parseUnityPrefab(source){
  const docs=source.split(/(?=^--- !u!)/m).filter(x=>/^--- !u!/.test(x));
