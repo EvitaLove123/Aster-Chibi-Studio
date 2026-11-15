@@ -89,7 +89,7 @@ const humanoidNames=['head','neck','chest','spine','upperChest','leftUpperLeg','
 function resize(){const w=canvas.clientWidth,h=canvas.clientHeight;if(!w||!h)return;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
 new ResizeObserver(resize).observe(canvas);resize();
 function setStatus(s){statusEl.textContent=s}
-function bone(name){return currentVRM?.humanoid?.getNormalizedBoneNode(name)||null}
+function bone(name){return currentVRM?.humanoid?.getRawBoneNode(name)||null}
 function saveBase(){baseScales.clear();basePositions.clear();for(const n of humanoidNames){const b=bone(n);if(b){baseScales.set(n,b.scale.clone());basePositions.set(n,b.position.clone())}}}
 function restore(){for(const n of humanoidNames){const b=bone(n);if(b&&baseScales.has(n)){b.scale.copy(baseScales.get(n));b.position.copy(basePositions.get(n))}}}
 function scaleSegmentOffset(name,factor){const b=bone(name),p=basePositions.get(name);if(b&&p)b.position.copy(p).multiplyScalar(factor)}
@@ -99,7 +99,7 @@ function applyValues(){
  let h,t,l,a;
  if(activeMode==='chibi'){h=+document.querySelector('#head').value;t=+document.querySelector('#torso').value;l=+document.querySelector('#legs').value;a=+document.querySelector('#arms').value}
  else{h=+document.querySelector('#adultHead').value;t=+document.querySelector('#adultTorso').value;l=+document.querySelector('#adultLegs').value;a=+document.querySelector('#adultArms').value}
- // Change actual joint-to-joint offsets so the skinned body follows the new segment lengths.
+ // Edit the raw humanoid bones used by the model's actual skin skeleton. Normalized bones are for retargeting, not mesh deformation.
  // Do not scale the whole avatar root: tail, hair, ears and props keep their own transforms.
  scaleHead(h);
  for(const n of ['chest','upperChest','neck','head'])scaleSegmentOffset(n,t);
@@ -120,7 +120,7 @@ async function loadFile(file){if(!file||!file.name.toLowerCase().endsWith('.vrm'
  if(currentVRM){scene.remove(currentVRM.scene);VRMUtils.deepDispose(currentVRM.scene);currentVRM=null}
  if(currentUrl)URL.revokeObjectURL(currentUrl);currentUrl=URL.createObjectURL(file);
  const loader=new GLTFLoader();loader.register(parser=>new VRMLoaderPlugin(parser));
- try{const gltf=await loader.loadAsync(currentUrl);currentVRM=gltf.userData.vrm;if(!currentVRM)throw new Error('VRM data was not found.');scene.add(currentVRM.scene);VRMUtils.removeUnnecessaryVertices(currentVRM.scene);VRMUtils.combineSkeletons(currentVRM.scene);saveBase();fitModel();document.querySelector('#modelName').textContent=file.name;setStatus('Model loaded. Choose Chibi or Adult to preview.');applyValues()}
+ try{const gltf=await loader.loadAsync(currentUrl);currentVRM=gltf.userData.vrm;if(!currentVRM)throw new Error('VRM data was not found.');scene.add(currentVRM.scene);saveBase();fitModel();document.querySelector('#modelName').textContent=file.name;const found=[...basePositions.keys()].length;setStatus(found?'Model loaded. Editing original rig bones ('+found+' mapped bones).':'Model loaded, but no editable raw humanoid bones were found.');applyValues()}
  catch(e){console.error(e);drop.classList.remove('hidden');setStatus('Could not load model: '+(e?.message||'Unknown error'))}
 }
 document.querySelector('#file').addEventListener('change',e=>loadFile(e.target.files[0]));
