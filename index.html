@@ -191,7 +191,7 @@ function applyValues(){
 function updateOutputs(){for(const id of ['head','torso','legs','arms','eyes','adultHead','adultTorso','adultLegs','adultArms','adultEyes']){const el=document.getElementById(id),out=document.getElementById(id+'Out');if(el&&out)out.value=(+el.value).toFixed(2)+'×'}}
 function fitModel(){if(!currentVRM)return;const box=new THREE.Box3().setFromObject(currentVRM.scene);const size=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3());currentVRM.scene.position.x-=center.x;currentVRM.scene.position.z-=center.z;currentVRM.scene.position.y-=box.min.y;const height=Math.max(size.y,.5);controls.target.set(0,height*.52,0);camera.position.set(0,height*.65,height*2.7);camera.near=Math.max(.001,height/100);camera.far=height*100;camera.updateProjectionMatrix();controls.update()}
 async function loadFile(file){if(!file||!file.name.toLowerCase().endsWith('.vrm')){setStatus('Please choose a .vrm file.');return}if(file.size>250*1024*1024){setStatus('File exceeds 250 MB. Try a smaller model to avoid running out of memory on your phone.');return}
- setStatus('Loading and decoding model…');drop.classList.add('hidden');
+ setStatus('Loading and decoding model…');drop.classList.add('hidden');document.querySelector('#export').disabled=true;
  if(currentVRM){scene.remove(currentVRM.scene);VRMUtils.deepDispose(currentVRM.scene);currentVRM=null}
  if(currentUrl)URL.revokeObjectURL(currentUrl);currentUrl=URL.createObjectURL(file);
  const loader=new GLTFLoader();loader.register(parser=>new VRMLoaderPlugin(parser));
@@ -210,8 +210,8 @@ document.querySelector('#limbPart').addEventListener('change',showBoneEdit);
 ['X','Y','Z'].forEach(axis=>{
  const rot=document.getElementById('boneRot'+axis),rr=document.getElementById('boneRot'+axis+'Range');
  const scl=document.getElementById('boneScale'+axis),sr=document.getElementById('boneScale'+axis+'Range');
- rot.addEventListener('input',()=>{rr.value=rot.value;updateSelectedBoneEdit()});rr.addEventListener('input',()=>{rot.value=rr.value;updateSelectedBoneEdit()});
- scl.addEventListener('input',()=>{sr.value=scl.value;updateSelectedBoneEdit()});sr.addEventListener('input',()=>{scl.value=sr.value;updateSelectedBoneEdit()});
+ rot.addEventListener('input',()=>{rr.value=rot.value;updateSelectedBoneEdit()});rr.addEventListener('input',()=>{rot.value=rr.value;updateSelectedBoneEdit()});rot.addEventListener('change',()=>{rr.value=rot.value;updateSelectedBoneEdit()});
+ scl.addEventListener('input',()=>{sr.value=scl.value;updateSelectedBoneEdit()});sr.addEventListener('input',()=>{scl.value=sr.value;updateSelectedBoneEdit()});scl.addEventListener('change',()=>{sr.value=scl.value;updateSelectedBoneEdit()});
 });
 document.querySelector('#resetBone').onclick=()=>{boneEdits.delete(selectedBoneName());applyValues();showBoneEdit()};
 document.querySelector('#export').onclick=downloadEditedVRM;
