@@ -207,7 +207,7 @@ async function loadFile(file){if(!file||!file.name.toLowerCase().endsWith('.vrm'
  // Raw-bone editing must disable three-vrm's default normalized-to-raw synchronization.
  // Otherwise VRM.update() overwrites the edited raw bone transforms every animation frame.
  currentVRM.humanoid.autoUpdateHumanBones=false;
- scene.add(currentVRM.scene);saveBase();boneEdits.clear();document.querySelector("#chin").value=0;scanChinTargets();showBoneEdit();document.querySelector("#export").disabled=false;document.querySelector("#downloadTop").disabled=false;fitModel();document.querySelector('#modelName').textContent=file.name;const found=[...basePositions.keys()].length;setStatus(found?'Model loaded. Editing original rig bones ('+found+' mapped bones).':'Model loaded, but no editable raw humanoid bones were found.');applyValues()}
+ scene.add(currentVRM.scene);saveBase();boneEdits.clear();document.querySelector("#chin").value=0;scanChinTargets();showBoneEdit();document.querySelector('#applyPrefab').disabled=!importedPrefabData?.mapped?.length;document.querySelector("#export").disabled=false;document.querySelector("#downloadTop").disabled=false;fitModel();document.querySelector('#modelName').textContent=file.name;const found=[...basePositions.keys()].length;setStatus(found?'Model loaded. Editing original rig bones ('+found+' mapped bones).':'Model loaded, but no editable raw humanoid bones were found.');applyValues()}
  catch(e){console.error(e);drop.classList.remove('hidden');setStatus('Could not load model: '+(e?.message||'Unknown error'))}
 }
 document.querySelector('#file').addEventListener('change',e=>loadFile(e.target.files[0]));
