@@ -279,12 +279,25 @@ function parseUnityPrefab(source){
  }
  const mapped=[];
  for(const t of transforms){const name=objects.get(t.gameObject),boneName=unityBoneName(name);if(boneName)mapped.push({...t,name,boneName})}
- const mods=(source.match(/propertyPath:/g)||[]).length;
- const blend=(source.match(/propertyPath:\s*m_BlendShapeWeights\.Array\.data\[/g)||[]).length;
- const spring=(source.match(/propertyPath:\s*m_(?:Translation|Rotation)(?:AtRest|Offsets)/g)||[]).length;
- const colliders=(source.match(/propertyPath:\s*collider_/g)||[]).length;
+ // Unity Prefab Variants store changes as target fileID + propertyPath pairs.
+ // Those fileIDs belong to the source Unity asset and are not VRM bone names.
+ const overrides=[];
+ const modRe=/- target:\s*\{fileID:\s*(-?\d+),\s*guid:\s*([0-9a-f]{32}),\s*type:\s*(\d+)\}\s*\n\s*propertyPath:\s*([^\n]+)\s*\n\s*value:\s*([^\n]*)/g;
+ let mm;
+ while((mm=modRe.exec(source))){
+  const path=mm[4].trim(),value=mm[5].trim();
+  overrides.push({fileId:mm[1],guid:mm[2],type:Number(mm[3]),path,value});
+ }
+ const blendOverrides=overrides.filter(x=>/^m_BlendShapeWeights\.Array\.data\[\d+\]$/.test(x.path));
+ const blendIndices=[...new Set(blendOverrides.map(x=>Number(x.path.match(/\[(\d+)\]/)[1])))].sort((a,b)=>a-b);
+ const transformOverrides=overrides.filter(x=>/^m_Local(?:Position|Rotation|Scale)\./.test(x.path));
+ const transformTargets=new Set(transformOverrides.map(x=>x.fileId));
+ const spring=overrides.filter(x=>/Translation(?:AtRest|Offsets)|Rotation(?:AtRest|Offsets)|m_IsLocked/.test(x.path));
+ const colliders=overrides.filter(x=>/^collider_/.test(x.path)||/^radius$|^height$/.test(x.path));
+ const sourceGuids=[...new Set([...source.matchAll(/m_SourcePrefab:\s*\{fileID:\s*\d+,\s*guid:\s*([0-9a-f]{32})/g)].map(x=>x[1]))];
+ const guids=[...new Set(overrides.map(x=>x.guid))];
  const variant=/m_SourcePrefab:\s*\{fileID:/m.test(source)||/PrefabInstance:/.test(source);
- return {mapped,transforms:transforms.length,mods,blend,spring,colliders,variant};
+ return {mapped,transforms:transforms.length,mods:overrides.length,blend:blendOverrides.length,blendIndices,transformOverrides:transformOverrides.length,transformTargets:transformTargets.size,spring:spring.length,colliders:colliders.length,variant,sourceGuids,guids,overrides};
 }
 function preparePrefabTransform(item){
  const b=bone(item.boneName);if(!b)return null;
@@ -307,12 +320,14 @@ async function inspectPrefabFile(file){
   else source=await file.text();
   if(!source.includes('%YAML')&&!source.includes('PrefabInstance:'))throw new Error('This does not look like a Unity text Prefab.');
   const parsed=parseUnityPrefab(source);importedPrefabData=parsed;
-  summary.textContent='Named bone transforms found: '+parsed.mapped.length+' / '+parsed.transforms+' transforms\nPrefab overrides: '+parsed.mods+' · BlendShape index overrides: '+parsed.blend+' · Spring Bone fields: '+parsed.spring+' · Collider fields: '+parsed.colliders;
+  const blendText=parsed.blendIndices.length?parsed.blendIndices.join(', '):'none';
+  const sourceText=parsed.sourceGuids.length?parsed.sourceGuids.join(', '):'not declared';
+  summary.textContent='Named bone transforms: '+parsed.mapped.length+' / '+parsed.transforms+' standalone transforms\\nUnity overrides: '+parsed.mods+' across '+parsed.guids.length+' source GUID(s)\\nTransform overrides: '+parsed.transformOverrides+' on '+parsed.transformTargets+' Unity objects\\nBlendShape overrides: '+parsed.blend+' (indices '+blendText+')\\nSpring/PhysBone fields: '+parsed.spring+' · Collider fields: '+parsed.colliders+'\\nSource Prefab GUID: '+sourceText;
   if(parsed.mapped.length){
    status.textContent='Prefab loaded: '+sourceLabel+'. '+parsed.mapped.length+' named bone transform(s) can be mapped. Review before applying.';
    apply.disabled=!currentVRM;
   }else if(parsed.variant){
-   status.textContent='Loaded '+sourceLabel+'. This is a Prefab Variant. Its Transform overrides point to an external base asset by GUID/fileID, but the base hierarchy is not included. No safe bone mapping is available, so Apply is disabled.';
+   status.textContent='Analyzed '+sourceLabel+'. Its '+parsed.mods+' Unity overrides were read successfully, including '+parsed.blend+' BlendShape values. The target fileIDs still need the original Unity hierarchy to identify the correct bones and meshes. Nothing will be changed automatically; Apply stays disabled to protect your VRM.';
   }else{
    status.textContent='No humanoid bone names could be mapped from this Prefab. No changes will be applied.';
   }
