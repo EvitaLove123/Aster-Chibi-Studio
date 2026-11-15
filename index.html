@@ -208,7 +208,7 @@ async function loadFile(file){if(!file||!file.name.toLowerCase().endsWith('.vrm'
  // Raw-bone editing must disable three-vrm's default normalized-to-raw synchronization.
  // Otherwise VRM.update() overwrites the edited raw bone transforms every animation frame.
  currentVRM.humanoid.autoUpdateHumanBones=false;
- scene.add(currentVRM.scene);saveBase();boneEdits.clear();document.querySelector("#chin").value=0;scanChinTargets();showBoneEdit();document.querySelector('#applyPrefab').disabled=!importedPrefabData?.mapped?.length;document.querySelector("#export").disabled=false;document.querySelector("#downloadTop").disabled=false;fitModel();document.querySelector('#modelName').textContent=file.name;const found=[...basePositions.keys()].length;setStatus(found?'Model loaded. Editing original rig bones ('+found+' mapped bones).':'Model loaded, but no editable raw humanoid bones were found.');applyValues()}
+ scene.add(currentVRM.scene);saveBase();boneEdits.clear();if(importedPrefabData)appendBlendshapeCandidates();document.querySelector("#chin").value=0;scanChinTargets();showBoneEdit();document.querySelector('#applyPrefab').disabled=!importedPrefabData?.mapped?.length;document.querySelector("#export").disabled=false;document.querySelector("#downloadTop").disabled=false;fitModel();document.querySelector('#modelName').textContent=file.name;const found=[...basePositions.keys()].length;setStatus(found?'Model loaded. Editing original rig bones ('+found+' mapped bones).':'Model loaded, but no editable raw humanoid bones were found.');applyValues()}
  catch(e){console.error(e);drop.classList.remove('hidden');setStatus('Could not load model: '+(e?.message||'Unknown error'))}
 }
 document.querySelector('#file').addEventListener('change',e=>loadFile(e.target.files[0]));
@@ -265,6 +265,28 @@ function unityBoneName(name){
   if(/toe/.test(n))return side+'Toes';
  }
  return null;
+}
+function getBlendshapeCandidates(indices){
+ if(!currentVRM||!indices?.length)return [];
+ const out=[];
+ currentVRM.scene.traverse(obj=>{
+  if(!obj.isMesh||!obj.morphTargetDictionary||!obj.morphTargetInfluences)return;
+  for(const index of indices){
+   if(index>=0&&index<obj.morphTargetInfluences.length){
+    const name=Object.keys(obj.morphTargetDictionary).find(k=>obj.morphTargetDictionary[k]===index);
+    if(name)out.push(obj.name+'['+index+'] → '+name);
+   }
+  }
+ });
+ return [...new Set(out)].slice(0,24);
+}
+function appendBlendshapeCandidates(){
+ if(!importedPrefabData)return;
+ const summary=document.querySelector('#prefabSummary');
+ const base=summary.dataset.baseSummary||summary.textContent;
+ summary.dataset.baseSummary=base;
+ const candidates=getBlendshapeCandidates(importedPrefabData.blendIndices);
+ summary.textContent=base+(candidates.length?'\\nPossible VRM morph candidates (index only; verify source mesh):\\n'+candidates.join('\\n'):'\\nVRM morph candidates: load a model to inspect matching index positions.');
 }
 function parseUnityPrefab(source){
  const docs=source.split(/(?=^--- !u!)/m).filter(x=>/^--- !u!/.test(x));
@@ -360,6 +382,7 @@ async function inspectPrefabFile(file){
   const blendText=parsed.blendIndices.length?parsed.blendIndices.join(', '):'none';
   const sourceText=parsed.sourceGuids.length?parsed.sourceGuids.join(', '):'not declared';
   summary.textContent='Auto-matched humanoid bones: '+parsed.mapped.length+' ('+(parsed.resolvedTargets||0)+' resolved Variant targets)\nNamed transforms scanned: '+parsed.transforms+'\nUnity overrides: '+parsed.mods+' across '+parsed.guids.length+' source GUID(s)\nTransform overrides: '+parsed.transformOverrides+' on '+parsed.transformTargets+' targets ('+(parsed.unresolvedTargets||0)+' unresolved)\nBlendShape overrides: '+parsed.blend+' (source indices '+blendText+')\nSpring/PhysBone fields: '+parsed.spring+' · Collider fields: '+parsed.colliders+'\nSource Prefab GUID: '+sourceText;
+  summary.dataset.baseSummary=summary.textContent;appendBlendshapeCandidates();
   if(parsed.mapped.length){
    status.textContent='Prefab loaded: '+sourceLabel+'. '+parsed.mapped.length+' named bone transform(s) can be mapped. Review before applying.';
    apply.disabled=!currentVRM;
