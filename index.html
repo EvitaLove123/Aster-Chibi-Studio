@@ -335,7 +335,8 @@ function parseUnityPrefab(source){
   }
   resolved.push(item);
  }
- for(const item of resolved)if(!mapped.some(x=>x.boneName===item.boneName))mapped.push(item);
+ if(variant){mapped.length=0;for(const item of resolved)if(!mapped.some(x=>x.boneName===item.boneName))mapped.push(item)}
+ else for(const item of resolved)if(!mapped.some(x=>x.boneName===item.boneName))mapped.push(item);
  return {mapped,transforms:transforms.length,mods:overrides.length,blend:blendOverrides.length,blendIndices,transformOverrides:transformOverrides.length,transformTargets:transformTargets.size,spring:spring.length,colliders:colliders.length,variant,sourceGuids,guids,overrides,resolvedTargets:resolved.length,unresolvedTargets:unresolvedTargets.length};
 }
 function preparePrefabTransform(item){
