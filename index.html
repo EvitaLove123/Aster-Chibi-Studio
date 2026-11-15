@@ -17,7 +17,7 @@ main{max-width:1100px;margin:auto;padding:0 14px 30px;display:grid;grid-template
 .controls{padding:18px}.sectionTitle{font-weight:750;margin:0 0 12px;font-size:16px}.muted{color:var(--muted);font-size:13px}
 button,.fileButton{border:0;border-radius:12px;padding:11px 14px;font:600 14px system-ui;cursor:pointer;background:var(--soft);color:#5145b5}
 button.primary{background:var(--accent);color:white}button.secondary{background:#f1f3f8;color:#3c4358}button:disabled{opacity:.45;cursor:not-allowed}
-input[type=file]{display:none}.actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+input[type=file]{display:none}.actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.downloadBar{display:grid;grid-template-columns:1fr;margin:12px 0 16px}.downloadBar button{width:100%;min-height:48px;font-size:15px;box-shadow:0 4px 12px #7567d926}
 .tabs{display:grid;grid-template-columns:1fr 1fr;gap:7px;background:#f2f3f8;padding:5px;border-radius:13px;margin:10px 0 16px}
 .tabs button{background:transparent;color:#70778b}.tabs button.active{background:white;color:#5145b5;box-shadow:0 2px 8px #20263a12}
 .advancedEditor{margin:18px 0;padding:14px;border:1px solid var(--line);border-radius:14px;background:#fbfbfe}.advancedGrid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.advancedEditor label{display:block;font-size:12px;font-weight:700;margin:10px 0 5px}.advancedEditor select,.advancedEditor input{width:100%;min-height:40px;border:1px solid #dfe2ed;border-radius:10px;background:#fff;color:var(--ink);padding:8px;font:14px system-ui}.axisGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.axisCell span{display:block;font-size:11px;color:var(--muted);margin:0 0 4px}.advancedHint{font-size:11px;color:var(--muted);margin-top:8px}.axisCell input[type=range]{display:block;width:100%;min-height:20px;padding:0;border:0;background:transparent;accent-color:var(--accent)}.axisCell input[type=number]{min-height:36px}
@@ -47,6 +47,7 @@ footer{max-width:1100px;margin:0 auto;padding:0 16px 26px;color:var(--muted);fon
  <h2 class="sectionTitle">Model Editor</h2>
  <div class="muted">Load a model to start editing its proportions.</div>
  <div class="actions"><label class="fileButton primary" for="file">＋ Load VRM</label><input id="file" type="file" accept=".vrm,model/gltf-binary"></div>
+ <div class="downloadBar"><button class="primary" id="downloadTop" disabled>↓ Download Edited VRM</button></div>
  <div class="tabs"><button id="chibiTab" class="active">Chibi</button><button id="adultTab">Adult</button></div>
  <div id="chibiPanel">
   <div class="field"><div class="fieldHead"><span>Head size</span><output id="headOut">1.30×</output></div><input id="head" type="range" min="1" max="1.65" step=".01" value="1.30"></div>
@@ -191,7 +192,7 @@ function applyValues(){
 function updateOutputs(){for(const id of ['head','torso','legs','arms','eyes','adultHead','adultTorso','adultLegs','adultArms','adultEyes']){const el=document.getElementById(id),out=document.getElementById(id+'Out');if(el&&out)out.value=(+el.value).toFixed(2)+'×'}}
 function fitModel(){if(!currentVRM)return;const box=new THREE.Box3().setFromObject(currentVRM.scene);const size=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3());currentVRM.scene.position.x-=center.x;currentVRM.scene.position.z-=center.z;currentVRM.scene.position.y-=box.min.y;const height=Math.max(size.y,.5);controls.target.set(0,height*.52,0);camera.position.set(0,height*.65,height*2.7);camera.near=Math.max(.001,height/100);camera.far=height*100;camera.updateProjectionMatrix();controls.update()}
 async function loadFile(file){if(!file||!file.name.toLowerCase().endsWith('.vrm')){setStatus('Please choose a .vrm file.');return}if(file.size>250*1024*1024){setStatus('File exceeds 250 MB. Try a smaller model to avoid running out of memory on your phone.');return}
- setStatus('Loading and decoding model…');drop.classList.add('hidden');document.querySelector('#export').disabled=true;
+ setStatus('Loading and decoding model…');drop.classList.add('hidden');document.querySelector('#export').disabled=true;document.querySelector('#downloadTop').disabled=true;
  if(currentVRM){scene.remove(currentVRM.scene);VRMUtils.deepDispose(currentVRM.scene);currentVRM=null}
  if(currentUrl)URL.revokeObjectURL(currentUrl);currentUrl=URL.createObjectURL(file);
  const loader=new GLTFLoader();loader.register(parser=>new VRMLoaderPlugin(parser));
@@ -199,7 +200,7 @@ async function loadFile(file){if(!file||!file.name.toLowerCase().endsWith('.vrm'
  // Raw-bone editing must disable three-vrm's default normalized-to-raw synchronization.
  // Otherwise VRM.update() overwrites the edited raw bone transforms every animation frame.
  currentVRM.humanoid.autoUpdateHumanBones=false;
- scene.add(currentVRM.scene);saveBase();boneEdits.clear();document.querySelector("#chin").value=0;scanChinTargets();showBoneEdit();document.querySelector("#export").disabled=false;fitModel();document.querySelector('#modelName').textContent=file.name;const found=[...basePositions.keys()].length;setStatus(found?'Model loaded. Editing original rig bones ('+found+' mapped bones).':'Model loaded, but no editable raw humanoid bones were found.');applyValues()}
+ scene.add(currentVRM.scene);saveBase();boneEdits.clear();document.querySelector("#chin").value=0;scanChinTargets();showBoneEdit();document.querySelector("#export").disabled=false;document.querySelector("#downloadTop").disabled=false;fitModel();document.querySelector('#modelName').textContent=file.name;const found=[...basePositions.keys()].length;setStatus(found?'Model loaded. Editing original rig bones ('+found+' mapped bones).':'Model loaded, but no editable raw humanoid bones were found.');applyValues()}
  catch(e){console.error(e);drop.classList.remove('hidden');setStatus('Could not load model: '+(e?.message||'Unknown error'))}
 }
 document.querySelector('#file').addEventListener('change',e=>loadFile(e.target.files[0]));
@@ -214,7 +215,7 @@ document.querySelector('#limbPart').addEventListener('change',showBoneEdit);
  scl.addEventListener('input',()=>{sr.value=scl.value;updateSelectedBoneEdit()});sr.addEventListener('input',()=>{scl.value=sr.value;updateSelectedBoneEdit()});scl.addEventListener('change',()=>{sr.value=scl.value;updateSelectedBoneEdit()});
 });
 document.querySelector('#resetBone').onclick=()=>{boneEdits.delete(selectedBoneName());applyValues();showBoneEdit()};
-document.querySelector('#export').onclick=downloadEditedVRM;
+document.querySelector('#export').onclick=downloadEditedVRM;document.querySelector('#downloadTop').onclick=downloadEditedVRM;
 document.querySelector('#mirrorBone').onclick=mirrorSelectedBone;
 drop.addEventListener('dragover',e=>{e.preventDefault();drop.style.background='#eeeaff'});
 drop.addEventListener('dragleave',()=>drop.style.background='#ffffffb8');
