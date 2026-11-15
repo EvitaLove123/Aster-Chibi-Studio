@@ -20,6 +20,7 @@ button.primary{background:var(--accent);color:white}button.secondary{background:
 input[type=file]{display:none}.actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
 .tabs{display:grid;grid-template-columns:1fr 1fr;gap:7px;background:#f2f3f8;padding:5px;border-radius:13px;margin:10px 0 16px}
 .tabs button{background:transparent;color:#70778b}.tabs button.active{background:white;color:#5145b5;box-shadow:0 2px 8px #20263a12}
+.boneFinder{margin:16px 0;padding:13px;background:#f8f8fd;border:1px solid var(--line);border-radius:14px}.boneFinder label{display:block;font-size:12px;font-weight:700;margin:10px 0 5px}.boneFinder input,.boneFinder select{width:100%;min-height:42px;border:1px solid #dfe2ed;border-radius:10px;background:white;color:var(--ink);padding:9px 10px;font:14px system-ui}.boneFinder select{max-height:180px}.boneMeta{font-size:11px;color:var(--muted);margin-top:7px;overflow-wrap:anywhere}
 .field{margin:16px 0}.fieldHead{display:flex;justify-content:space-between;gap:10px;margin-bottom:7px;font-weight:650;font-size:13px}.fieldHead output{color:var(--accent);font-variant-numeric:tabular-nums}
 input[type=range]{width:100%;accent-color:var(--accent)}
 .presetGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.presetGrid button{padding:9px 4px;font-size:12px}
@@ -46,6 +47,16 @@ footer{max-width:1100px;margin:0 auto;padding:0 16px 26px;color:var(--muted);fon
  <h2 class="sectionTitle">Model Editor</h2>
  <div class="muted">Load a model to start editing its proportions.</div>
  <div class="actions"><label class="fileButton primary" for="file">＋ Load VRM</label><input id="file" type="file" accept=".vrm,model/gltf-binary"></div>
+ <div class="boneFinder">
+  <div class="sectionTitle">Bone Finder</div>
+  <div class="muted">Search and select any bone in the model, including hair, ears, tails and accessories.</div>
+  <label for="boneSearch">Search bones</label>
+  <input id="boneSearch" type="search" placeholder="Type a bone name… " autocomplete="off" disabled>
+  <label for="boneSelect">Select bone</label>
+  <select id="boneSelect" size="5" disabled><option>Load a VRM model first</option></select>
+  <div class="actions"><button class="secondary" id="focusBone" disabled>Focus Selected Bone</button></div>
+  <div class="boneMeta" id="boneMeta">No bone selected.</div>
+ </div>
  <div class="tabs"><button id="chibiTab" class="active">Chibi</button><button id="adultTab">Adult</button></div>
  <div id="chibiPanel">
   <div class="field"><div class="fieldHead"><span>Head size</span><output id="headOut">1.30×</output></div><input id="head" type="range" min="1" max="1.65" step=".01" value="1.30"></div>
@@ -85,10 +96,42 @@ const fill=new THREE.DirectionalLight(0xdedaff,.8);fill.position.set(-3,2,-2);sc
 const grid=new THREE.GridHelper(5,20,0xcbd0e1,0xe0e3ed);grid.position.y=0;scene.add(grid);
 const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.target.set(0,1,0);controls.minDistance=.5;controls.maxDistance=8;
 let currentVRM=null, currentUrl=null, baseScales=new Map(), basePositions=new Map(), activeMode='chibi';
+let allBoneNodes=[], selectedBone=null, boneMarker=null;
 const humanoidNames=['head','neck','chest','spine','upperChest','leftUpperLeg','leftLowerLeg','leftFoot','rightUpperLeg','rightLowerLeg','rightFoot','leftUpperArm','leftLowerArm','leftHand','rightUpperArm','rightLowerArm','rightHand'];
 function resize(){const w=canvas.clientWidth,h=canvas.clientHeight;if(!w||!h)return;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
 new ResizeObserver(resize).observe(canvas);resize();
 function setStatus(s){statusEl.textContent=s}
+function bonePath(node){const parts=[];let n=node;while(n&&n!==currentVRM?.scene){if(n.isBone)parts.unshift(n.name||'Unnamed Bone');n=n.parent}return parts.join(' / ')}
+function populateBoneFinder(){
+ const search=document.querySelector('#boneSearch'),select=document.querySelector('#boneSelect'),focus=document.querySelector('#focusBone');
+ allBoneNodes=[];currentVRM?.scene.traverse(n=>{if(n.isBone)allBoneNodes.push(n)});
+ allBoneNodes.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+ search.disabled=select.disabled=focus.disabled=!allBoneNodes.length;
+ search.value='';renderBoneOptions();
+ document.querySelector('#boneMeta').textContent=allBoneNodes.length?allBoneNodes.length+' bones found, including non-humanoid bones.':'No bones found in this model.';
+ if(!boneMarker){boneMarker=new THREE.Mesh(new THREE.SphereGeometry(.025,12,8),new THREE.MeshBasicMaterial({color:0x806cff,depthTest:false}));boneMarker.renderOrder=999;scene.add(boneMarker)}
+ boneMarker.visible=false;selectedBone=null;
+}
+function renderBoneOptions(){
+ const search=document.querySelector('#boneSearch'),select=document.querySelector('#boneSelect'),q=search.value.trim().toLowerCase(),previous=selectedBone?.uuid;
+ const matches=allBoneNodes.filter(n=>(n.name||'').toLowerCase().includes(q)||bonePath(n).toLowerCase().includes(q));
+ select.innerHTML='';
+ for(const n of matches){const option=document.createElement('option');option.value=n.uuid;option.textContent=(n.name||'Unnamed Bone')+' — '+bonePath(n);select.appendChild(option)}
+ if(previous&&matches.some(n=>n.uuid===previous))select.value=previous;
+ else if(matches.length)select.selectedIndex=0;
+ select.disabled=!matches.length;document.querySelector('#focusBone').disabled=!matches.length;
+ if(!matches.length)document.querySelector('#boneMeta').textContent='No matching bones. Try another search.';
+ else chooseBone(select.value,false);
+}
+function chooseBone(uuid,focus=true){
+ selectedBone=allBoneNodes.find(n=>n.uuid===uuid)||null;
+ const meta=document.querySelector('#boneMeta');
+ if(!selectedBone){meta.textContent='No bone selected.';if(boneMarker)boneMarker.visible=false;return}
+ selectedBone.updateWorldMatrix(true,false);const p=new THREE.Vector3();selectedBone.getWorldPosition(p);
+ meta.textContent='Selected: '+(selectedBone.name||'Unnamed Bone')+' · '+bonePath(selectedBone);
+ if(boneMarker){boneMarker.position.copy(p);boneMarker.visible=true}
+ if(focus){controls.target.copy(p);controls.update()}
+}
 function bone(name){return currentVRM?.humanoid?.getRawBoneNode(name)||null}
 function saveBase(){baseScales.clear();basePositions.clear();for(const n of humanoidNames){const b=bone(n);if(b){baseScales.set(n,b.scale.clone());basePositions.set(n,b.position.clone())}}}
 function restore(){for(const n of humanoidNames){const b=bone(n);if(b&&baseScales.has(n)){b.scale.copy(baseScales.get(n));b.position.copy(basePositions.get(n))}}}
@@ -124,10 +167,13 @@ async function loadFile(file){if(!file||!file.name.toLowerCase().endsWith('.vrm'
  // Raw-bone editing must disable three-vrm's default normalized-to-raw synchronization.
  // Otherwise VRM.update() overwrites the edited raw bone transforms every animation frame.
  currentVRM.humanoid.autoUpdateHumanBones=false;
- scene.add(currentVRM.scene);saveBase();fitModel();document.querySelector('#modelName').textContent=file.name;const found=[...basePositions.keys()].length;setStatus(found?'Model loaded. Editing original rig bones ('+found+' mapped bones).':'Model loaded, but no editable raw humanoid bones were found.');applyValues()}
+ scene.add(currentVRM.scene);saveBase();fitModel();populateBoneFinder();document.querySelector('#modelName').textContent=file.name;const found=[...basePositions.keys()].length;setStatus(found?'Model loaded. Editing original rig bones ('+found+' mapped bones).':'Model loaded, but no editable raw humanoid bones were found.');applyValues()}
  catch(e){console.error(e);drop.classList.remove('hidden');setStatus('Could not load model: '+(e?.message||'Unknown error'))}
 }
 document.querySelector('#file').addEventListener('change',e=>loadFile(e.target.files[0]));
+document.querySelector('#boneSearch').addEventListener('input',renderBoneOptions);
+document.querySelector('#boneSelect').addEventListener('change',e=>chooseBone(e.target.value));
+document.querySelector('#focusBone').onclick=()=>{if(selectedBone)chooseBone(selectedBone.uuid,true)};
 drop.addEventListener('dragover',e=>{e.preventDefault();drop.style.background='#eeeaff'});
 drop.addEventListener('dragleave',()=>drop.style.background='#ffffffb8');
 drop.addEventListener('drop',e=>{e.preventDefault();drop.style.background='#ffffffb8';loadFile(e.dataTransfer.files[0])});
@@ -139,6 +185,6 @@ document.querySelectorAll('[data-adult]').forEach(btn=>btn.onclick=()=>{const p=
 document.querySelector('#reset').onclick=()=>{if(!currentVRM)return;restore();for(const [id,val] of Object.entries({head:1.3,torso:.82,legs:.75,arms:.85,adultHead:.95,adultTorso:1.1,adultLegs:1.15,adultArms:1.05}))document.getElementById(id).value=val;updateOutputs();setStatus('Editor controls have been reset.');applyValues()};
 document.querySelector('#center').onclick=fitModel;
 updateOutputs();
-function animate(){requestAnimationFrame(animate);if(currentVRM)currentVRM.update(1/60);controls.update();renderer.render(scene,camera)}animate();
+function animate(){requestAnimationFrame(animate);if(currentVRM)currentVRM.update(1/60);if(selectedBone&&boneMarker){selectedBone.updateWorldMatrix(true,false);selectedBone.getWorldPosition(boneMarker.position)}controls.update();renderer.render(scene,camera)}animate();
 </script>
 </body></html>
