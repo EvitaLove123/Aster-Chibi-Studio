@@ -30,7 +30,7 @@ footer{max-width:1100px;margin:0 auto;padding:0 16px 26px;color:var(--muted);fon
 @media(max-width:760px){main{grid-template-columns:1fr}.viewer{min-height:55vh;max-height:620px}.controls{padding:16px}header{padding-top:14px}}
 </style>
 <script type="importmap">
-{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/","@pixiv/three-vrm":"https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@3.3.0/lib/three-vrm.module.js"}}
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/","@pixiv/three-vrm":"https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@3.3.0/lib/three-vrm.module.js","jszip":"https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm"}}
 </script>
 </head>
 <body>
@@ -51,7 +51,7 @@ footer{max-width:1100px;margin:0 auto;padding:0 16px 26px;color:var(--muted);fon
  <div class="prefabImport">
   <div class="sectionTitle">Prefab Import</div>
   <div class="muted">Import a Unity text .prefab and apply supported bone transforms to the loaded VRM.</div>
-  <div class="actions"><label class="fileButton" for="prefabFile">＋ Choose Chibi Prefab</label><input id="prefabFile" type="file" accept=".prefab,.yaml,.yml,text/plain"><button class="primary" id="applyPrefab" disabled>Apply Prefab to Model</button></div>
+  <div class="actions"><label class="fileButton" for="prefabFile">＋ Choose Chibi Prefab</label><input id="prefabFile" type="file" accept=".prefab,.yaml,.yml,.zip,text/plain,application/zip"><button class="primary" id="applyPrefab" disabled>Apply Prefab to Model</button></div>
   <div class="prefabStatus" id="prefabStatus">Choose a Unity .prefab file. A variant may need its original base prefab to resolve bone names.</div>
   <div class="prefabSummary" id="prefabSummary"></div>
  </div>
@@ -113,6 +113,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
+import JSZip from 'jszip';
 
 const canvas=document.querySelector('#stage'), drop=document.querySelector('#drop'), statusEl=document.querySelector('#status');
 const scene=new THREE.Scene(); scene.background=new THREE.Color(0xf0f2fa);
@@ -298,17 +299,20 @@ async function inspectPrefabFile(file){
  importedPrefabData=null;const apply=document.querySelector('#applyPrefab');apply.disabled=true;
  const summary=document.querySelector('#prefabSummary'),status=document.querySelector('#prefabStatus');
  if(!file){status.textContent='No Prefab selected.';summary.textContent='';return}
- if(!/\\.(prefab|yaml|yml)$/i.test(file.name)){status.textContent='Please choose an extracted Unity text .prefab file. ZIP and .unitypackage containers are not parsed in this version.';summary.textContent='';return}
+ if(!/\\.(prefab|yaml|yml|zip)$/i.test(file.name)){status.textContent='Choose a Unity text .prefab file or a ZIP containing one. .unitypackage files are not supported yet.';summary.textContent='';return}
  status.textContent='Reading Unity Prefab…';
  try{
-  const source=await file.text();if(!source.includes('%YAML')&&!source.includes('PrefabInstance:'))throw new Error('This does not look like a Unity text Prefab.');
+  let source='',sourceLabel=file.name;
+  if(/\\.zip$/i.test(file.name)){const zip=await JSZip.loadAsync(await file.arrayBuffer());const entries=Object.values(zip.files).filter(entry=>!entry.dir&&/\\.prefab$/i.test(entry.name));if(!entries.length)throw new Error('No .prefab file was found inside this ZIP.');const entry=entries.find(x=>/chibi|rurune/i.test(x.name))||entries[0];source=await entry.async('string');sourceLabel=entry.name;}
+  else source=await file.text();
+  if(!source.includes('%YAML')&&!source.includes('PrefabInstance:'))throw new Error('This does not look like a Unity text Prefab.');
   const parsed=parseUnityPrefab(source);importedPrefabData=parsed;
   summary.textContent='Named bone transforms found: '+parsed.mapped.length+' / '+parsed.transforms+' transforms\\nPrefab overrides: '+parsed.mods+' · BlendShape index overrides: '+parsed.blend+' · Spring Bone fields: '+parsed.spring+' · Collider fields: '+parsed.colliders;
   if(parsed.mapped.length){
-   status.textContent='Prefab loaded. '+parsed.mapped.length+' named bone transform(s) can be mapped. Review before applying.';
+   status.textContent='Prefab loaded: '+sourceLabel+'. '+parsed.mapped.length+' named bone transform(s) can be mapped. Review before applying.';
    apply.disabled=!currentVRM;
   }else if(parsed.variant){
-   status.textContent='This is a Prefab Variant. Its bone Transform overrides point to an external base asset by GUID/fileID, but the base hierarchy is not included. No safe bone mapping is available, so Apply is disabled.';
+   status.textContent='Loaded '+sourceLabel+'. This is a Prefab Variant. Its Transform overrides point to an external base asset by GUID/fileID, but the base hierarchy is not included. No safe bone mapping is available, so Apply is disabled.';
   }else{
    status.textContent='No humanoid bone names could be mapped from this Prefab. No changes will be applied.';
   }
