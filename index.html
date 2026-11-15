@@ -269,20 +269,20 @@ function parseUnityPrefab(source){
  const docs=source.split(/(?=^--- !u!)/m).filter(x=>/^--- !u!/.test(x));
  const objects=new Map(),transforms=[];
  for(const doc of docs){
-  const head=doc.match(/^--- !u!(\\d+) &(-?\\d+)/),type=head?Number(head[1]):0,id=head?head[2]:null;if(!id)continue;
-  if(type===1){const nm=doc.match(/^\\s*m_Name:\\s*(.+)$/m);if(nm)objects.set(id,nm[1].trim().replace(/^['"]|['"]$/g,''))}
+  const head=doc.match(/^--- !u!(\d+) &(-?\d+)/),type=head?Number(head[1]):0,id=head?head[2]:null;if(!id)continue;
+  if(type===1){const nm=doc.match(/^\s*m_Name:\s*(.+)$/m);if(nm)objects.set(id,nm[1].trim().replace(/^['"]|['"]$/g,''))}
   if(type===4){
-   const go=doc.match(/^\\s*m_GameObject:\\s*\\{fileID:\\s*(-?\\d+)\\}/m),pos=unityVector(doc,'m_LocalPosition',3),rot=unityVector(doc,'m_LocalRotation',4),scale=unityVector(doc,'m_LocalScale',3);
+   const go=doc.match(/^\s*m_GameObject:\s*\{fileID:\s*(-?\d+)\}/m),pos=unityVector(doc,'m_LocalPosition',3),rot=unityVector(doc,'m_LocalRotation',4),scale=unityVector(doc,'m_LocalScale',3);
    if(go&&(pos||rot||scale))transforms.push({id,gameObject:go[1],pos,rot,scale});
   }
  }
  const mapped=[];
  for(const t of transforms){const name=objects.get(t.gameObject),boneName=unityBoneName(name);if(boneName)mapped.push({...t,name,boneName})}
  const mods=(source.match(/propertyPath:/g)||[]).length;
- const blend=(source.match(/propertyPath:\\s*m_BlendShapeWeights\\.Array\\.data\\[/g)||[]).length;
- const spring=(source.match(/propertyPath:\\s*m_(?:Translation|Rotation)(?:AtRest|Offsets)/g)||[]).length;
- const colliders=(source.match(/propertyPath:\\s*collider_/g)||[]).length;
- const variant=/m_SourcePrefab:\\s*\\{fileID:/m.test(source)||/PrefabInstance:/.test(source);
+ const blend=(source.match(/propertyPath:\s*m_BlendShapeWeights\.Array\.data\[/g)||[]).length;
+ const spring=(source.match(/propertyPath:\s*m_(?:Translation|Rotation)(?:AtRest|Offsets)/g)||[]).length;
+ const colliders=(source.match(/propertyPath:\s*collider_/g)||[]).length;
+ const variant=/m_SourcePrefab:\s*\{fileID:/m.test(source)||/PrefabInstance:/.test(source);
  return {mapped,transforms:transforms.length,mods,blend,spring,colliders,variant};
 }
 function preparePrefabTransform(item){
