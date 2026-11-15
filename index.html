@@ -20,6 +20,7 @@ button.primary{background:var(--accent);color:white}button.secondary{background:
 input[type=file]{display:none}.actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
 .tabs{display:grid;grid-template-columns:1fr 1fr;gap:7px;background:#f2f3f8;padding:5px;border-radius:13px;margin:10px 0 16px}
 .tabs button{background:transparent;color:#70778b}.tabs button.active{background:white;color:#5145b5;box-shadow:0 2px 8px #20263a12}
+.advancedEditor{margin:18px 0;padding:14px;border:1px solid var(--line);border-radius:14px;background:#fbfbfe}.advancedGrid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.advancedEditor label{display:block;font-size:12px;font-weight:700;margin:10px 0 5px}.advancedEditor select,.advancedEditor input{width:100%;min-height:40px;border:1px solid #dfe2ed;border-radius:10px;background:#fff;color:var(--ink);padding:8px;font:14px system-ui}.axisGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.axisCell span{display:block;font-size:11px;color:var(--muted);margin:0 0 4px}.advancedHint{font-size:11px;color:var(--muted);margin-top:8px}
 .field{margin:16px 0}.fieldHead{display:flex;justify-content:space-between;gap:10px;margin-bottom:7px;font-weight:650;font-size:13px}.fieldHead output{color:var(--accent);font-variant-numeric:tabular-nums}
 input[type=range]{width:100%;accent-color:var(--accent)}
 .presetGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.presetGrid button{padding:9px 4px;font-size:12px}
@@ -63,6 +64,34 @@ footer{max-width:1100px;margin:0 auto;padding:0 16px 26px;color:var(--muted);fon
   <div class="field"><div class="fieldHead"><span>Eye size</span><output id="adultEyesOut">1.00×</output></div><input id="adultEyes" type="range" min=".75" max="1.35" step=".01" value="1"></div>
   <div class="muted">Adult presets</div><div class="presetGrid" style="margin-top:8px"><button data-adult="petite">Petite</button><button data-adult="normal">Normal</button><button data-adult="tall">Tall</button><button data-adult="reset">Reset</button></div>
  </div>
+ <div class="advancedEditor">
+  <div class="sectionTitle">Advanced Bone Editor</div>
+  <div class="muted">Adjust individual limbs on the left or right side.</div>
+  <div class="advancedGrid">
+   <div><label for="limbSide">Side</label><select id="limbSide"><option value="left">Left</option><option value="right">Right</option></select></div>
+   <div><label for="limbPart">Body Part</label><select id="limbPart">
+    <option value="Shoulder">Shoulder</option><option value="UpperArm">Upper Arm</option><option value="LowerArm">Lower Arm / Elbow</option><option value="Hand">Hand</option>
+    <option value="UpperLeg">Upper Leg / Thigh</option><option value="LowerLeg">Knee / Lower Leg</option><option value="Foot">Ankle / Foot</option><option value="Toes">Toe</option>
+   </select></div>
+  </div>
+  <div class="field"><div class="fieldHead"><span>Position Offset</span><span class="muted">meters</span></div><div class="axisGrid">
+   <div class="axisCell"><span>X</span><input id="bonePosX" type="number" step="0.01" value="0"></div>
+   <div class="axisCell"><span>Y</span><input id="bonePosY" type="number" step="0.01" value="0"></div>
+   <div class="axisCell"><span>Z</span><input id="bonePosZ" type="number" step="0.01" value="0"></div>
+  </div></div>
+  <div class="field"><div class="fieldHead"><span>Rotation Offset</span><span class="muted">degrees</span></div><div class="axisGrid">
+   <div class="axisCell"><span>X</span><input id="boneRotX" type="number" step="1" value="0"></div>
+   <div class="axisCell"><span>Y</span><input id="boneRotY" type="number" step="1" value="0"></div>
+   <div class="axisCell"><span>Z</span><input id="boneRotZ" type="number" step="1" value="0"></div>
+  </div></div>
+  <div class="field"><div class="fieldHead"><span>Scale Multiplier</span><span class="muted">×</span></div><div class="axisGrid">
+   <div class="axisCell"><span>X</span><input id="boneScaleX" type="number" min="0.01" step="0.01" value="1"></div>
+   <div class="axisCell"><span>Y</span><input id="boneScaleY" type="number" min="0.01" step="0.01" value="1"></div>
+   <div class="axisCell"><span>Z</span><input id="boneScaleZ" type="number" min="0.01" step="0.01" value="1"></div>
+  </div></div>
+  <div class="actions"><button class="secondary" id="resetBone">Reset Bone</button><button class="secondary" id="mirrorBone">Mirror to Other Side</button></div>
+  <div class="advancedHint" id="boneEditorStatus">Load a VRM model to edit its humanoid bones. Ankle uses the VRM Foot bone; Knee uses Lower Leg.</div>
+ </div>
  <div class="divider"></div>
  <div class="actions"><button class="secondary" id="reset">Reset Proportions</button><button class="secondary" id="center">Center View</button><button class="primary" id="export" disabled>Export VRM · Not available yet</button></div>
  <div class="note"><b>Prototype notes:</b> This is an experimental skeleton-based proportion editor. It changes humanoid joint offsets and head scale; exact results depend on the model rig. Separate hair, ears, tails and accessories are not directly edited, but items skinned to the same bones may still move or deform. VRM export remains disabled until a VRM 0.x-safe exporter is implemented.</div>
@@ -86,18 +115,48 @@ const key=new THREE.DirectionalLight(0xffffff,2.2);key.position.set(2,4,3);scene
 const fill=new THREE.DirectionalLight(0xdedaff,.8);fill.position.set(-3,2,-2);scene.add(fill);
 const grid=new THREE.GridHelper(5,20,0xcbd0e1,0xe0e3ed);grid.position.y=0;scene.add(grid);
 const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.target.set(0,1,0);controls.minDistance=.5;controls.maxDistance=8;
-let currentVRM=null, currentUrl=null, baseScales=new Map(), basePositions=new Map(), activeMode='chibi';
+let currentVRM=null, currentUrl=null, baseScales=new Map(), basePositions=new Map(), baseQuaternions=new Map(), activeMode='chibi';
+const boneEdits=new Map();
 
-const humanoidNames=['head','neck','chest','spine','upperChest','leftEye','rightEye','leftUpperLeg','leftLowerLeg','leftFoot','rightUpperLeg','rightLowerLeg','rightFoot','leftUpperArm','leftLowerArm','leftHand','rightUpperArm','rightLowerArm','rightHand'];
+const humanoidNames=['head','neck','chest','spine','upperChest','leftEye','rightEye','leftShoulder','rightShoulder','leftUpperLeg','leftLowerLeg','leftFoot','leftToes','rightUpperLeg','rightLowerLeg','rightFoot','rightToes','leftUpperArm','leftLowerArm','leftHand','rightUpperArm','rightLowerArm','rightHand'];
 function resize(){const w=canvas.clientWidth,h=canvas.clientHeight;if(!w||!h)return;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
 new ResizeObserver(resize).observe(canvas);resize();
 function setStatus(s){statusEl.textContent=s}
 function bone(name){return currentVRM?.humanoid?.getRawBoneNode(name)||null}
-function saveBase(){baseScales.clear();basePositions.clear();for(const n of humanoidNames){const b=bone(n);if(b){baseScales.set(n,b.scale.clone());basePositions.set(n,b.position.clone())}}}
-function restore(){for(const n of humanoidNames){const b=bone(n);if(b&&baseScales.has(n)){b.scale.copy(baseScales.get(n));b.position.copy(basePositions.get(n))}}}
+function saveBase(){baseScales.clear();basePositions.clear();baseQuaternions.clear();for(const n of humanoidNames){const b=bone(n);if(b){baseScales.set(n,b.scale.clone());basePositions.set(n,b.position.clone());baseQuaternions.set(n,b.quaternion.clone())}}}
+function restore(){for(const n of humanoidNames){const b=bone(n);if(b&&baseScales.has(n)){b.scale.copy(baseScales.get(n));b.position.copy(basePositions.get(n));b.quaternion.copy(baseQuaternions.get(n))}}}
 function scaleSegmentOffset(name,factor){const b=bone(name),p=basePositions.get(name);if(b&&p)b.position.copy(p).multiplyScalar(factor)}
 function scaleHead(factor){const b=bone('head'),s=baseScales.get('head');if(b&&s)b.scale.set(s.x*factor,s.y*factor,s.z*factor)}
 function scaleEyes(factor){for(const name of ['leftEye','rightEye']){const b=bone(name),s=baseScales.get(name);if(b&&s)b.scale.set(s.x*factor,s.y*factor,s.z*factor)}}
+function selectedBoneName(){return document.querySelector('#limbSide').value+document.querySelector('#limbPart').value}
+function readBoneEdit(name){const v=boneEdits.get(name)||{p:[0,0,0],r:[0,0,0],s:[1,1,1]};return {p:[...v.p],r:[...v.r],s:[...v.s]}}
+function showBoneEdit(){
+ const name=selectedBoneName(),b=bone(name),v=readBoneEdit(name),ids=['bonePosX','bonePosY','bonePosZ','boneRotX','boneRotY','boneRotZ','boneScaleX','boneScaleY','boneScaleZ'];
+ const vals=[...v.p,...v.r,...v.s];
+ ids.forEach((id,i)=>{const el=document.getElementById(id);el.value=String(vals[i]);el.disabled=!b});
+ document.querySelector('#boneEditorStatus').textContent=b?'Editing '+name+' · Preview only; VRM export is not implemented.':'This VRM does not expose the '+name+' humanoid bone.';
+ document.querySelector('#resetBone').disabled=!b;document.querySelector('#mirrorBone').disabled=!b;
+}
+function applyBoneEdits(){
+ for(const [name,v] of boneEdits){const b=bone(name),p=basePositions.get(name),q=baseQuaternions.get(name),s=baseScales.get(name);if(!b||!p||!q||!s)continue;
+  b.position.copy(p).add(new THREE.Vector3(...v.p));
+  const delta=new THREE.Quaternion().setFromEuler(new THREE.Euler(THREE.MathUtils.degToRad(v.r[0]),THREE.MathUtils.degToRad(v.r[1]),THREE.MathUtils.degToRad(v.r[2]),'XYZ'));
+  b.quaternion.copy(q).multiply(delta);
+  b.scale.set(s.x*v.s[0],s.y*v.s[1],s.z*v.s[2]);
+ }
+}
+function updateSelectedBoneEdit(){
+ const name=selectedBoneName();if(!bone(name))return;
+ const vals=['bonePosX','bonePosY','bonePosZ','boneRotX','boneRotY','boneRotZ','boneScaleX','boneScaleY','boneScaleZ'].map(id=>Number(document.getElementById(id).value));
+ if(vals.some(v=>!Number.isFinite(v)))return;
+ boneEdits.set(name,{p:vals.slice(0,3),r:vals.slice(3,6),s:vals.slice(6,9).map(v=>Math.max(.01,v))});applyValues();
+}
+function mirrorSelectedBone(){
+ const name=selectedBoneName(),side=document.querySelector('#limbSide').value,other=name.replace(side,side==='left'?'right':'left');
+ if(!bone(other)){document.querySelector('#boneEditorStatus').textContent='Opposite-side bone is not available in this model.';return}
+ const v=readBoneEdit(name);v.p[0]*=-1;v.r[1]*=-1;v.r[2]*=-1;boneEdits.set(other,v);applyValues();
+ document.querySelector('#limbSide').value=side==='left'?'right':'left';showBoneEdit();
+}
 function applyValues(){
  if(!currentVRM)return;restore();
  let h,t,l,a,e;
@@ -115,6 +174,7 @@ function applyValues(){
    scaleSegmentOffset(side+'LowerArm',a);
    scaleSegmentOffset(side+'Hand',a);
  }
+ applyBoneEdits();
  currentVRM.scene.updateMatrixWorld(true);
 }
 function updateOutputs(){for(const id of ['head','torso','legs','arms','eyes','adultHead','adultTorso','adultLegs','adultArms','adultEyes']){const el=document.getElementById(id),out=document.getElementById(id+'Out');if(el&&out)out.value=(+el.value).toFixed(2)+'×'}}
@@ -128,10 +188,15 @@ async function loadFile(file){if(!file||!file.name.toLowerCase().endsWith('.vrm'
  // Raw-bone editing must disable three-vrm's default normalized-to-raw synchronization.
  // Otherwise VRM.update() overwrites the edited raw bone transforms every animation frame.
  currentVRM.humanoid.autoUpdateHumanBones=false;
- scene.add(currentVRM.scene);saveBase();fitModel();document.querySelector('#modelName').textContent=file.name;const found=[...basePositions.keys()].length;setStatus(found?'Model loaded. Editing original rig bones ('+found+' mapped bones).':'Model loaded, but no editable raw humanoid bones were found.');applyValues()}
+ scene.add(currentVRM.scene);saveBase();boneEdits.clear();showBoneEdit();fitModel();document.querySelector('#modelName').textContent=file.name;const found=[...basePositions.keys()].length;setStatus(found?'Model loaded. Editing original rig bones ('+found+' mapped bones).':'Model loaded, but no editable raw humanoid bones were found.');applyValues()}
  catch(e){console.error(e);drop.classList.remove('hidden');setStatus('Could not load model: '+(e?.message||'Unknown error'))}
 }
 document.querySelector('#file').addEventListener('change',e=>loadFile(e.target.files[0]));
+document.querySelector('#limbSide').addEventListener('change',showBoneEdit);
+document.querySelector('#limbPart').addEventListener('change',showBoneEdit);
+['bonePosX','bonePosY','bonePosZ','boneRotX','boneRotY','boneRotZ','boneScaleX','boneScaleY','boneScaleZ'].forEach(id=>document.getElementById(id).addEventListener('change',updateSelectedBoneEdit));
+document.querySelector('#resetBone').onclick=()=>{boneEdits.delete(selectedBoneName());applyValues();showBoneEdit()};
+document.querySelector('#mirrorBone').onclick=mirrorSelectedBone;
 drop.addEventListener('dragover',e=>{e.preventDefault();drop.style.background='#eeeaff'});
 drop.addEventListener('dragleave',()=>drop.style.background='#ffffffb8');
 drop.addEventListener('drop',e=>{e.preventDefault();drop.style.background='#ffffffb8';loadFile(e.dataTransfer.files[0])});
@@ -140,9 +205,9 @@ document.querySelector('#chibiTab').onclick=()=>setMode('chibi');document.queryS
 document.querySelectorAll('input[type=range]').forEach(el=>el.addEventListener('input',()=>{updateOutputs();applyValues()}));
 document.querySelectorAll('[data-head]').forEach(btn=>btn.onclick=()=>{document.querySelector('#head').value=btn.dataset.head;document.querySelector('#torso').value=btn.dataset.torso;document.querySelector('#legs').value=btn.dataset.legs;updateOutputs();applyValues()});
 document.querySelectorAll('[data-adult]').forEach(btn=>btn.onclick=()=>{const p=btn.dataset.adult,vals=p==='petite'?[.98,1.02,1.02,1]:p==='tall'?[.92,1.18,1.28,1.05]:p==='normal'?[.95,1.1,1.15,1.05]:[1,1,1,1];['adultHead','adultTorso','adultLegs','adultArms'].forEach((id,i)=>document.getElementById(id).value=vals[i]);updateOutputs();applyValues()});
-document.querySelector('#reset').onclick=()=>{if(!currentVRM)return;restore();for(const [id,val] of Object.entries({head:1.3,torso:.82,legs:.75,arms:.85,eyes:1,adultHead:.95,adultTorso:1.1,adultLegs:1.15,adultArms:1.05,adultEyes:1}))document.getElementById(id).value=val;updateOutputs();setStatus('Editor controls have been reset.');applyValues()};
+document.querySelector('#reset').onclick=()=>{if(!currentVRM)return;boneEdits.clear();restore();for(const [id,val] of Object.entries({head:1.3,torso:.82,legs:.75,arms:.85,eyes:1,adultHead:.95,adultTorso:1.1,adultLegs:1.15,adultArms:1.05,adultEyes:1}))document.getElementById(id).value=val;updateOutputs();setStatus('Editor controls have been reset.');applyValues()};
 document.querySelector('#center').onclick=fitModel;
-updateOutputs();
+updateOutputs();showBoneEdit();
 function animate(){requestAnimationFrame(animate);if(currentVRM)currentVRM.update(1/60);controls.update();renderer.render(scene,camera)}animate();
 </script>
 </body></html>
