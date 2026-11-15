@@ -338,8 +338,21 @@ async function inspectPrefabFile(file){
    const entries=Object.values(zip.files).filter(entry=>!entry.dir&&/\.prefab$/i.test(entry.name));
    if(!entries.length)throw new Error('No .prefab file was found inside this ZIP.');
    const entry=entries.find(x=>/Chibi_rurune\.prefab$/i.test(x.name))||entries.find(x=>/chibi|rurune/i.test(x.name))||entries[0];
-   source=(await Promise.all(entries.map(async x=>'\\n# PREFAB SOURCE: '+x.name+'\\n'+await x.async('string')))).join('\\n');
-   sourceLabel=entry.name+' (scanned '+entries.length+' Prefab files)';
+   const primary=await entry.async('string');
+   const referenced=[...new Set([...primary.matchAll(/(?:m_SourcePrefab|target):\s*\{fileID:\s*-?\d+,\s*guid:\s*([0-9a-f]{32})/g)].map(m=>m[1]))];
+   const resolvedSources=[];
+   for(const guid of referenced){
+    for(const candidate of entries){
+     const meta=zip.file(candidate.name+'.meta');
+     if(!meta)continue;
+     const metaText=await meta.async('string');
+     if(new RegExp('^guid:\\s*'+guid+'\\s*$','m').test(metaText)){resolvedSources.push(await candidate.async('string'));break}
+    }
+   }
+   // Only append source assets whose .meta GUID matches a reference in the selected Variant.
+   // This avoids collisions between unrelated Unity fileID namespaces.
+   source=[primary,...resolvedSources].join('\\n');
+   sourceLabel=entry.name+' ('+resolvedSources.length+' referenced source Prefab(s) resolved)';
   }
   else source=await file.text();
   if(!source.includes('%YAML')&&!source.includes('PrefabInstance:'))throw new Error('This does not look like a Unity text Prefab.');
