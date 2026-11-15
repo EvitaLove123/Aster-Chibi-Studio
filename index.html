@@ -322,7 +322,7 @@ async function inspectPrefabFile(file){
   const parsed=parseUnityPrefab(source);importedPrefabData=parsed;
   const blendText=parsed.blendIndices.length?parsed.blendIndices.join(', '):'none';
   const sourceText=parsed.sourceGuids.length?parsed.sourceGuids.join(', '):'not declared';
-  summary.textContent='Named bone transforms: '+parsed.mapped.length+' / '+parsed.transforms+' standalone transforms\\nUnity overrides: '+parsed.mods+' across '+parsed.guids.length+' source GUID(s)\\nTransform overrides: '+parsed.transformOverrides+' on '+parsed.transformTargets+' Unity objects\\nBlendShape overrides: '+parsed.blend+' (indices '+blendText+')\\nSpring/PhysBone fields: '+parsed.spring+' · Collider fields: '+parsed.colliders+'\\nSource Prefab GUID: '+sourceText;
+  summary.textContent='Named bone transforms: '+parsed.mapped.length+' / '+parsed.transforms+' standalone transforms\nUnity overrides: '+parsed.mods+' across '+parsed.guids.length+' source GUID(s)\nTransform overrides: '+parsed.transformOverrides+' on '+parsed.transformTargets+' Unity objects\nBlendShape overrides: '+parsed.blend+' (indices '+blendText+')\nSpring/PhysBone fields: '+parsed.spring+' · Collider fields: '+parsed.colliders+'\nSource Prefab GUID: '+sourceText;
   if(parsed.mapped.length){
    status.textContent='Prefab loaded: '+sourceLabel+'. '+parsed.mapped.length+' named bone transform(s) can be mapped. Review before applying.';
    apply.disabled=!currentVRM;
