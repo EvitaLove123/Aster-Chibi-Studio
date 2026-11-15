@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="vi">
+<html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#f7f8fc"><title>Aster Chibi Studio</title>
@@ -36,38 +36,38 @@ footer{max-width:1100px;margin:0 auto;padding:0 16px 26px;color:var(--muted);fon
 <header><div class="brand">ASTER <span>CHIBI</span> STUDIO</div><div class="version">VRM 0.x · Preview MVP</div></header>
 <main>
 <section class="panel viewer">
- <div class="viewerTop"><div class="chip" id="modelName">Chưa có model</div><div class="chip">Kéo để xoay · Chụm để zoom</div></div>
+ <div class="viewerTop"><div class="chip" id="modelName">No model loaded</div><div class="chip">Drag to rotate · Pinch to zoom</div></div>
  <canvas id="stage"></canvas>
  <div class="drop" id="drop">
-  <div><strong>Thả model VRM vào đây</strong><p>Hoặc chọn file VRM 0.x từ điện thoại</p><label class="fileButton primary" for="file">Chọn model VRM</label></div>
+  <div><strong>Drop a VRM model here</strong><p>Or choose a VRM 0.x file from your phone</p><label class="fileButton primary" for="file">Choose VRM model</label></div>
  </div>
 </section>
 <section class="panel controls">
  <h2 class="sectionTitle">Model Editor</h2>
- <div class="muted">Tải model để bắt đầu chỉnh tỷ lệ nhân vật.</div>
+ <div class="muted">Load a model to start editing its proportions.</div>
  <div class="actions"><label class="fileButton primary" for="file">＋ Load VRM</label><input id="file" type="file" accept=".vrm,model/gltf-binary"></div>
- <div class="tabs"><button id="chibiTab" class="active">Chibi</button><button id="adultTab">Big / Adult</button></div>
+ <div class="tabs"><button id="chibiTab" class="active">Chibi</button><button id="adultTab">Adult</button></div>
  <div id="chibiPanel">
-  <div class="field"><div class="fieldHead"><span>Độ lớn đầu</span><output id="headOut">1.30×</output></div><input id="head" type="range" min="1" max="1.65" step=".01" value="1.30"></div>
-  <div class="field"><div class="fieldHead"><span>Độ ngắn thân</span><output id="torsoOut">0.82×</output></div><input id="torso" type="range" min=".65" max="1" step=".01" value=".82"></div>
-  <div class="field"><div class="fieldHead"><span>Độ ngắn chân</span><output id="legsOut">0.75×</output></div><input id="legs" type="range" min=".55" max="1" step=".01" value=".75"></div>
-  <div class="field"><div class="fieldHead"><span>Độ ngắn tay</span><output id="armsOut">0.85×</output></div><input id="arms" type="range" min=".65" max="1" step=".01" value=".85"></div>
-  <div class="muted">Preset Chibi</div><div class="presetGrid" style="margin-top:8px"><button data-head="1.55" data-torso=".72" data-legs=".65">2 đầu</button><button data-head="1.4" data-torso=".78" data-legs=".7">2.5 đầu</button><button data-head="1.3" data-torso=".82" data-legs=".75">3 đầu</button><button data-head="1.18" data-torso=".9" data-legs=".85">4 đầu</button></div>
+  <div class="field"><div class="fieldHead"><span>Head size</span><output id="headOut">1.30×</output></div><input id="head" type="range" min="1" max="1.65" step=".01" value="1.30"></div>
+  <div class="field"><div class="fieldHead"><span>Torso length</span><output id="torsoOut">0.82×</output></div><input id="torso" type="range" min=".65" max="1" step=".01" value=".82"></div>
+  <div class="field"><div class="fieldHead"><span>Leg length</span><output id="legsOut">0.75×</output></div><input id="legs" type="range" min=".55" max="1" step=".01" value=".75"></div>
+  <div class="field"><div class="fieldHead"><span>Arm length</span><output id="armsOut">0.85×</output></div><input id="arms" type="range" min=".65" max="1" step=".01" value=".85"></div>
+  <div class="muted">Chibi presets</div><div class="presetGrid" style="margin-top:8px"><button data-head="1.55" data-torso=".72" data-legs=".65">2-head</button><button data-head="1.4" data-torso=".78" data-legs=".7">2.5-head</button><button data-head="1.3" data-torso=".82" data-legs=".75">3-head</button><button data-head="1.18" data-torso=".9" data-legs=".85">4-head</button></div>
  </div>
  <div id="adultPanel" hidden>
-  <div class="field"><div class="fieldHead"><span>Tỷ lệ đầu</span><output id="adultHeadOut">0.95×</output></div><input id="adultHead" type="range" min=".85" max="1.15" step=".01" value=".95"></div>
-  <div class="field"><div class="fieldHead"><span>Chiều dài thân</span><output id="adultTorsoOut">1.10×</output></div><input id="adultTorso" type="range" min=".9" max="1.3" step=".01" value="1.10"></div>
-  <div class="field"><div class="fieldHead"><span>Chiều dài chân</span><output id="adultLegsOut">1.15×</output></div><input id="adultLegs" type="range" min=".9" max="1.4" step=".01" value="1.15"></div>
-  <div class="field"><div class="fieldHead"><span>Tỷ lệ tay</span><output id="adultArmsOut">1.05×</output></div><input id="adultArms" type="range" min=".9" max="1.25" step=".01" value="1.05"></div>
-  <div class="muted">Preset Adult</div><div class="presetGrid" style="margin-top:8px"><button data-adult="petite">Petite</button><button data-adult="normal">Normal</button><button data-adult="tall">Tall</button><button data-adult="reset">Reset</button></div>
+  <div class="field"><div class="fieldHead"><span>Head size</span><output id="adultHeadOut">0.95×</output></div><input id="adultHead" type="range" min=".85" max="1.15" step=".01" value=".95"></div>
+  <div class="field"><div class="fieldHead"><span>Torso length</span><output id="adultTorsoOut">1.10×</output></div><input id="adultTorso" type="range" min=".9" max="1.3" step=".01" value="1.10"></div>
+  <div class="field"><div class="fieldHead"><span>Leg length</span><output id="adultLegsOut">1.15×</output></div><input id="adultLegs" type="range" min=".9" max="1.4" step=".01" value="1.15"></div>
+  <div class="field"><div class="fieldHead"><span>Arm length</span><output id="adultArmsOut">1.05×</output></div><input id="adultArms" type="range" min=".9" max="1.25" step=".01" value="1.05"></div>
+  <div class="muted">Adult presets</div><div class="presetGrid" style="margin-top:8px"><button data-adult="petite">Petite</button><button data-adult="normal">Normal</button><button data-adult="tall">Tall</button><button data-adult="reset">Reset</button></div>
  </div>
  <div class="divider"></div>
- <div class="actions"><button class="secondary" id="reset">Reset Original</button><button class="secondary" id="center">Center Model</button><button class="primary" id="export" disabled>Export VRM · Chưa hỗ trợ</button></div>
- <div class="note"><b>Lưu ý về bản MVP:</b> Đây là bản thử nghiệm preview biến dạng xương. Chưa xuất VRM thật; nút Export đang khóa để tránh tạo file sai hoặc làm mất metadata, expressions và Spring Bones.</div>
- <div class="status" id="status">Sẵn sàng tải model. Model được xử lý cục bộ trên thiết bị.</div>
+ <div class="actions"><button class="secondary" id="reset">Reset Proportions</button><button class="secondary" id="center">Center View</button><button class="primary" id="export" disabled>Export VRM · Not available yet</button></div>
+ <div class="note"><b>Prototype notes:</b> This is an experimental skeleton-based proportion editor. It changes humanoid joint offsets and head scale; exact results depend on the model rig. Separate hair, ears, tails and accessories are not directly edited, but items skinned to the same bones may still move or deform. VRM export remains disabled until a VRM 0.x-safe exporter is implemented.</div>
+ <div class="status" id="status">Ready to load a model. All processing stays on your device.</div>
 </section>
 </main>
-<footer>Aster Chibi Studio · Xử lý model trong trình duyệt · Không tải model lên máy chủ.</footer>
+<footer>Aster Chibi Studio · Browser-based processing · Your model is never uploaded.</footer>
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -85,34 +85,43 @@ const fill=new THREE.DirectionalLight(0xdedaff,.8);fill.position.set(-3,2,-2);sc
 const grid=new THREE.GridHelper(5,20,0xcbd0e1,0xe0e3ed);grid.position.y=0;scene.add(grid);
 const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.target.set(0,1,0);controls.minDistance=.5;controls.maxDistance=8;
 let currentVRM=null, currentUrl=null, baseScales=new Map(), basePositions=new Map(), activeMode='chibi';
-const humanoidNames=['head','neck','chest','spine','upperChest','leftUpperLeg','leftLowerLeg','rightUpperLeg','rightLowerLeg','leftUpperArm','leftLowerArm','rightUpperArm','rightLowerArm'];
+const humanoidNames=['head','neck','chest','spine','upperChest','leftUpperLeg','leftLowerLeg','leftFoot','rightUpperLeg','rightLowerLeg','rightFoot','leftUpperArm','leftLowerArm','leftHand','rightUpperArm','rightLowerArm','rightHand'];
 function resize(){const w=canvas.clientWidth,h=canvas.clientHeight;if(!w||!h)return;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
 new ResizeObserver(resize).observe(canvas);resize();
 function setStatus(s){statusEl.textContent=s}
 function bone(name){return currentVRM?.humanoid?.getNormalizedBoneNode(name)||null}
 function saveBase(){baseScales.clear();basePositions.clear();for(const n of humanoidNames){const b=bone(n);if(b){baseScales.set(n,b.scale.clone());basePositions.set(n,b.position.clone())}}}
 function restore(){for(const n of humanoidNames){const b=bone(n);if(b&&baseScales.has(n)){b.scale.copy(baseScales.get(n));b.position.copy(basePositions.get(n))}}}
-function scaleBone(n,x,y=x,z=x){const b=bone(n);if(b&&baseScales.has(n)){const s=baseScales.get(n);b.scale.set(s.x*x,s.y*y,s.z*z)}}
+function scaleSegmentOffset(name,factor){const b=bone(name),p=basePositions.get(name);if(b&&p)b.position.copy(p).multiplyScalar(factor)}
+function scaleHead(factor){const b=bone('head'),s=baseScales.get('head');if(b&&s)b.scale.set(s.x*factor,s.y*factor,s.z*factor)}
 function applyValues(){
  if(!currentVRM)return;restore();
  let h,t,l,a;
  if(activeMode==='chibi'){h=+document.querySelector('#head').value;t=+document.querySelector('#torso').value;l=+document.querySelector('#legs').value;a=+document.querySelector('#arms').value}
  else{h=+document.querySelector('#adultHead').value;t=+document.querySelector('#adultTorso').value;l=+document.querySelector('#adultLegs').value;a=+document.querySelector('#adultArms').value}
- scaleBone('head',h);scaleBone('neck',1, t,1);
- for(const n of ['spine','chest','upperChest'])scaleBone(n,1,t,1);
- for(const n of ['leftUpperLeg','leftLowerLeg','rightUpperLeg','rightLowerLeg'])scaleBone(n,1,l,1);
- for(const n of ['leftUpperArm','leftLowerArm','rightUpperArm','rightLowerArm'])scaleBone(n,a,a,a);
+ // Change actual joint-to-joint offsets so the skinned body follows the new segment lengths.
+ // Do not scale the whole avatar root: tail, hair, ears and props keep their own transforms.
+ scaleHead(h);
+ for(const n of ['chest','upperChest','neck','head'])scaleSegmentOffset(n,t);
+ for(const side of ['left','right']){
+   scaleSegmentOffset(side+'UpperLeg',l);
+   scaleSegmentOffset(side+'LowerLeg',l);
+   scaleSegmentOffset(side+'Foot',l);
+   scaleSegmentOffset(side+'UpperArm',a);
+   scaleSegmentOffset(side+'LowerArm',a);
+   scaleSegmentOffset(side+'Hand',a);
+ }
  currentVRM.scene.updateMatrixWorld(true);
 }
 function updateOutputs(){for(const id of ['head','torso','legs','arms','adultHead','adultTorso','adultLegs','adultArms']){const el=document.getElementById(id),out=document.getElementById(id+'Out');if(el&&out)out.value=(+el.value).toFixed(2)+'×'}}
 function fitModel(){if(!currentVRM)return;const box=new THREE.Box3().setFromObject(currentVRM.scene);const size=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3());currentVRM.scene.position.x-=center.x;currentVRM.scene.position.z-=center.z;currentVRM.scene.position.y-=box.min.y;const height=Math.max(size.y,.5);controls.target.set(0,height*.52,0);camera.position.set(0,height*.65,height*2.7);camera.near=Math.max(.001,height/100);camera.far=height*100;camera.updateProjectionMatrix();controls.update()}
-async function loadFile(file){if(!file||!file.name.toLowerCase().endsWith('.vrm')){setStatus('Vui lòng chọn file .vrm');return}if(file.size>250*1024*1024){setStatus('File lớn hơn 250 MB. Hãy thử model nhỏ hơn để tránh thiếu RAM trên điện thoại.');return}
- setStatus('Đang tải và giải mã model…');drop.classList.add('hidden');
+async function loadFile(file){if(!file||!file.name.toLowerCase().endsWith('.vrm')){setStatus('Please choose a .vrm file.');return}if(file.size>250*1024*1024){setStatus('File exceeds 250 MB. Try a smaller model to avoid running out of memory on your phone.');return}
+ setStatus('Loading and decoding model…');drop.classList.add('hidden');
  if(currentVRM){scene.remove(currentVRM.scene);VRMUtils.deepDispose(currentVRM.scene);currentVRM=null}
  if(currentUrl)URL.revokeObjectURL(currentUrl);currentUrl=URL.createObjectURL(file);
  const loader=new GLTFLoader();loader.register(parser=>new VRMLoaderPlugin(parser));
- try{const gltf=await loader.loadAsync(currentUrl);currentVRM=gltf.userData.vrm;if(!currentVRM)throw new Error('Không tìm thấy dữ liệu VRM.');scene.add(currentVRM.scene);VRMUtils.removeUnnecessaryVertices(currentVRM.scene);VRMUtils.combineSkeletons(currentVRM.scene);saveBase();fitModel();document.querySelector('#modelName').textContent=file.name;setStatus('Đã tải model. Chọn Chibi hoặc Big / Adult để xem thử.');applyValues()}
- catch(e){console.error(e);drop.classList.remove('hidden');setStatus('Không tải được model: '+(e?.message||'Lỗi không xác định'))}
+ try{const gltf=await loader.loadAsync(currentUrl);currentVRM=gltf.userData.vrm;if(!currentVRM)throw new Error('VRM data was not found.');scene.add(currentVRM.scene);VRMUtils.removeUnnecessaryVertices(currentVRM.scene);VRMUtils.combineSkeletons(currentVRM.scene);saveBase();fitModel();document.querySelector('#modelName').textContent=file.name;setStatus('Đã tải model. Chọn Chibi hoặc Adult để xem thử.');applyValues()}
+ catch(e){console.error(e);drop.classList.remove('hidden');setStatus('Could not load model: '+(e?.message||'Lỗi không xác định'))}
 }
 document.querySelector('#file').addEventListener('change',e=>loadFile(e.target.files[0]));
 drop.addEventListener('dragover',e=>{e.preventDefault();drop.style.background='#eeeaff'});
@@ -123,7 +132,7 @@ document.querySelector('#chibiTab').onclick=()=>setMode('chibi');document.queryS
 document.querySelectorAll('input[type=range]').forEach(el=>el.addEventListener('input',()=>{updateOutputs();applyValues()}));
 document.querySelectorAll('[data-head]').forEach(btn=>btn.onclick=()=>{document.querySelector('#head').value=btn.dataset.head;document.querySelector('#torso').value=btn.dataset.torso;document.querySelector('#legs').value=btn.dataset.legs;updateOutputs();applyValues()});
 document.querySelectorAll('[data-adult]').forEach(btn=>btn.onclick=()=>{const p=btn.dataset.adult,vals=p==='petite'?[.98,1.02,1.02,1]:p==='tall'?[.92,1.18,1.28,1.05]:p==='normal'?[.95,1.1,1.15,1.05]:[1,1,1,1];['adultHead','adultTorso','adultLegs','adultArms'].forEach((id,i)=>document.getElementById(id).value=vals[i]);updateOutputs();applyValues()});
-document.querySelector('#reset').onclick=()=>{if(!currentVRM)return;restore();for(const [id,val] of Object.entries({head:1.3,torso:.82,legs:.75,arms:.85,adultHead:.95,adultTorso:1.1,adultLegs:1.15,adultArms:1.05}))document.getElementById(id).value=val;updateOutputs();setStatus('Đã reset về thiết lập ban đầu của editor.');applyValues()};
+document.querySelector('#reset').onclick=()=>{if(!currentVRM)return;restore();for(const [id,val] of Object.entries({head:1.3,torso:.82,legs:.75,arms:.85,adultHead:.95,adultTorso:1.1,adultLegs:1.15,adultArms:1.05}))document.getElementById(id).value=val;updateOutputs();setStatus('Editor controls have been reset.');applyValues()};
 document.querySelector('#center').onclick=fitModel;
 updateOutputs();
 function animate(){requestAnimationFrame(animate);if(currentVRM)currentVRM.update(1/60);controls.update();renderer.render(scene,camera)}animate();
