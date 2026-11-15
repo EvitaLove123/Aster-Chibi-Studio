@@ -299,15 +299,15 @@ async function inspectPrefabFile(file){
  importedPrefabData=null;const apply=document.querySelector('#applyPrefab');apply.disabled=true;
  const summary=document.querySelector('#prefabSummary'),status=document.querySelector('#prefabStatus');
  if(!file){status.textContent='No Prefab selected.';summary.textContent='';return}
- if(!/\\.(prefab|yaml|yml|zip)$/i.test(file.name)){status.textContent='Choose a Unity text .prefab file or a ZIP containing one. .unitypackage files are not supported yet.';summary.textContent='';return}
+ if(!/\.(prefab|yaml|yml|zip)$/i.test(file.name)){status.textContent='Choose a Unity text .prefab file or a ZIP containing one. .unitypackage files are not supported yet.';summary.textContent='';return}
  status.textContent='Reading Unity Prefab…';
  try{
   let source='',sourceLabel=file.name;
-  if(/\\.zip$/i.test(file.name)){const zip=await JSZip.loadAsync(await file.arrayBuffer());const entries=Object.values(zip.files).filter(entry=>!entry.dir&&/\\.prefab$/i.test(entry.name));if(!entries.length)throw new Error('No .prefab file was found inside this ZIP.');const entry=entries.find(x=>/chibi|rurune/i.test(x.name))||entries[0];source=await entry.async('string');sourceLabel=entry.name;}
+  if(/\.zip$/i.test(file.name)){const zip=await JSZip.loadAsync(await file.arrayBuffer());const entries=Object.values(zip.files).filter(entry=>!entry.dir&&/\.prefab$/i.test(entry.name));if(!entries.length)throw new Error('No .prefab file was found inside this ZIP.');const entry=entries.find(x=>/chibi|rurune/i.test(x.name))||entries[0];source=await entry.async('string');sourceLabel=entry.name;}
   else source=await file.text();
   if(!source.includes('%YAML')&&!source.includes('PrefabInstance:'))throw new Error('This does not look like a Unity text Prefab.');
   const parsed=parseUnityPrefab(source);importedPrefabData=parsed;
-  summary.textContent='Named bone transforms found: '+parsed.mapped.length+' / '+parsed.transforms+' transforms\\nPrefab overrides: '+parsed.mods+' · BlendShape index overrides: '+parsed.blend+' · Spring Bone fields: '+parsed.spring+' · Collider fields: '+parsed.colliders;
+  summary.textContent='Named bone transforms found: '+parsed.mapped.length+' / '+parsed.transforms+' transforms\nPrefab overrides: '+parsed.mods+' · BlendShape index overrides: '+parsed.blend+' · Spring Bone fields: '+parsed.spring+' · Collider fields: '+parsed.colliders;
   if(parsed.mapped.length){
    status.textContent='Prefab loaded: '+sourceLabel+'. '+parsed.mapped.length+' named bone transform(s) can be mapped. Review before applying.';
    apply.disabled=!currentVRM;
