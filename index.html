@@ -56,6 +56,19 @@ footer{max-width:1100px;margin:0 auto;padding:0 16px 26px;color:var(--muted);fon
   <div class="prefabSummary" id="prefabSummary"></div>
  </div>
  <div class="tabs"><button id="chibiTab" class="active">Chibi</button><button id="adultTab">Adult</button></div>
+ <div class="advancedEditor" id="objectEditor">
+  <div class="sectionTitle">Hierarchy & Object Scale</div>
+  <div class="muted">Select a scene node (mesh, bone, hair, outfit, accessory or Root) and adjust its scale.</div>
+  <div id="objectTree" style="max-height:230px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:6px;margin:10px 0"><div class="muted">Load a VRM to display its hierarchy.</div></div>
+  <div id="objectSelected" class="muted">No object selected.</div>
+  <div class="axisGrid">
+   <div class="axisCell"><span>Scale X</span><input id="objScaleX" type="number" step="0.01" value="1"></div>
+   <div class="axisCell"><span>Scale Y</span><input id="objScaleY" type="number" step="0.01" value="1"></div>
+   <div class="axisCell"><span>Scale Z</span><input id="objScaleZ" type="number" step="0.01" value="1"></div>
+  </div>
+  <div class="actions"><button class="secondary" id="objReset" disabled>Reset selected scale</button><button class="secondary" id="treeRefresh" disabled>Refresh hierarchy</button></div>
+  <div class="advancedHint">This first hierarchy upgrade allows selecting and scaling existing nodes. Mesh detach/reparent/delete tools are planned next.</div>
+</div>
  <div class="advancedEditor" id="breastEditor">
   <div class="sectionTitle">Breast Bone Adjustment</div>
   <div class="muted" id="breastStatus">Detection scans separate breast bones, not Chest or UpperChest.</div>
@@ -239,7 +252,7 @@ async function loadFile(file){if(!file||!file.name.toLowerCase().endsWith('.vrm'
  // Raw-bone editing must disable three-vrm's default normalized-to-raw synchronization.
  // Otherwise VRM.update() overwrites the edited raw bone transforms every animation frame.
  currentVRM.humanoid.autoUpdateHumanBones=false;
- scene.add(currentVRM.scene);saveBase();scanBreastBones();boneEdits.clear();if(importedPrefabData)appendBlendshapeCandidates();document.querySelector("#chin").value=0;scanChinTargets();showBoneEdit();document.querySelector('#applyPrefab').disabled=!importedPrefabData?.mapped?.length;document.querySelector("#export").disabled=false;document.querySelector("#downloadTop").disabled=false;fitModel();document.querySelector('#modelName').textContent=file.name;const found=[...basePositions.keys()].length;setStatus(found?'Model loaded. Editing original rig bones ('+found+' mapped bones).':'Model loaded, but no editable raw humanoid bones were found.');applyValues()}
+ scene.add(currentVRM.scene);saveBase();rebuildObjectTree();scanBreastBones();boneEdits.clear();if(importedPrefabData)appendBlendshapeCandidates();document.querySelector("#chin").value=0;scanChinTargets();showBoneEdit();document.querySelector('#applyPrefab').disabled=!importedPrefabData?.mapped?.length;document.querySelector("#export").disabled=false;document.querySelector("#downloadTop").disabled=false;fitModel();document.querySelector('#modelName').textContent=file.name;const found=[...basePositions.keys()].length;setStatus(found?'Model loaded. Editing original rig bones ('+found+' mapped bones).':'Model loaded, but no editable raw humanoid bones were found.');applyValues()}
  catch(e){console.error(e);drop.classList.remove('hidden');setStatus('Could not load model: '+(e?.message||'Unknown error'))}
 }
 document.querySelector('#file').addEventListener('change',e=>loadFile(e.target.files[0]));
@@ -441,6 +454,26 @@ document.querySelector('#applyPrefab').addEventListener('click',()=>{
  else document.querySelector('#prefabStatus').textContent='No compatible humanoid bones were available in the loaded VRM.';
 });
 
+
+// Hierarchy / scene object scale editor
+let selectedSceneObject=null, objectScaleBases=new WeakMap();
+function rebuildObjectTree(){
+ const tree=document.querySelector('#objectTree');tree.innerHTML='';
+ if(!currentVRM){tree.innerHTML='<div class="muted">Load a VRM to display its hierarchy.</div>';return}
+ const root=currentVRM.scene;
+ function walk(obj,depth){
+  const row=document.createElement('div');row.style.cssText='padding:5px 7px;border-radius:8px;margin:1px 0;cursor:pointer;font-size:12px;overflow-wrap:anywhere;padding-left:'+Math.min(8+depth*12,140)+'px';
+  row.textContent=(obj.name||obj.type||'Unnamed')+' · '+obj.type+(obj.isMesh?' [Mesh]':'');
+  row.onclick=()=>{selectedSceneObject=obj;document.querySelectorAll('#objectTree div').forEach(el=>el.style.background='');row.style.background='#f0edff';row.style.color='#5145b5';document.querySelector('#objectSelected').textContent=(obj.name||obj.type)+' ('+obj.type+')';['X','Y','Z'].forEach((a,i)=>document.querySelector('#objScale'+a).value=[obj.scale.x,obj.scale.y,obj.scale.z][i].toFixed(3));document.querySelector('#objReset').disabled=false};
+  tree.appendChild(row);obj.children.forEach(ch=>walk(ch,depth+1));
+ }
+ walk(root,0);document.querySelector('#treeRefresh').disabled=false;
+}
+function applyObjectScale(){if(!selectedSceneObject)return;selectedSceneObject.scale.set(Number(document.querySelector('#objScaleX').value)||1,Number(document.querySelector('#objScaleY').value)||1,Number(document.querySelector('#objScaleZ').value)||1)}
+['X','Y','Z'].forEach(a=>document.querySelector('#objScale'+a).addEventListener('change',applyObjectScale));
+document.querySelector('#objReset').onclick=()=>{if(!selectedSceneObject)return;selectedSceneObject.scale.set(1,1,1);['X','Y','Z'].forEach(a=>document.querySelector('#objScale'+a).value=1)};
+document.querySelector('#treeRefresh').onclick=rebuildObjectTree;
+
 function downloadEditedVRM(){
  if(!currentVRM||!loadedGltf||!sourceGlbBuffer){setStatus('Load a VRM model before downloading.');return}
  try{
@@ -454,12 +487,7 @@ function downloadEditedVRM(){
    offset=start+length;
   }
   if(!json||!json.extensions||!json.extensions.VRM)throw new Error('This tool currently exports VRM 0.x only. VRM 1.0 is not supported.');
-  for(const name of humanoidNames){const obj=bone(name);if(!obj)continue;const assoc=loadedGltf.parser?.associations?.get(obj);if(!assoc||assoc.nodes===undefined)continue;
-   const node=json.nodes?.[assoc.nodes];if(!node)continue;
-   node.translation=[obj.position.x,obj.position.y,obj.position.z];
-   node.rotation=[obj.quaternion.x,obj.quaternion.y,obj.quaternion.z,obj.quaternion.w];
-   node.scale=[obj.scale.x,obj.scale.y,obj.scale.z];delete node.matrix;
-  }
+  currentVRM.scene.traverse(obj=>{const assoc=loadedGltf.parser?.associations?.get(obj);if(!assoc||assoc.nodes===undefined)return;const node=json.nodes?.[assoc.nodes];if(!node)return;node.translation=[obj.position.x,obj.position.y,obj.position.z];node.rotation=[obj.quaternion.x,obj.quaternion.y,obj.quaternion.z,obj.quaternion.w];node.scale=[obj.scale.x,obj.scale.y,obj.scale.z];delete node.matrix;});
   for(const t of chinTargets){const assoc=loadedGltf.parser?.associations?.get(t.mesh);if(!assoc||assoc.nodes===undefined||assoc.meshes===undefined)continue;
    const node=json.nodes?.[assoc.nodes],mesh=json.meshes?.[assoc.meshes],weights=t.mesh.morphTargetInfluences;
    if(node)node.weights=[...weights];if(mesh)mesh.weights=[...weights];
