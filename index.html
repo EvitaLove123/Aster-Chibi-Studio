@@ -56,6 +56,15 @@ footer{max-width:1100px;margin:0 auto;padding:0 16px 26px;color:var(--muted);fon
   <div class="prefabSummary" id="prefabSummary"></div>
  </div>
  <div class="tabs"><button id="chibiTab" class="active">Chibi</button><button id="adultTab">Adult</button></div>
+ <div class="advancedEditor" id="breastEditor">
+  <div class="sectionTitle">Breast Size Adjustment</div>
+  <div class="muted">Preview adjustment using chest humanoid bone scaling. Results depend on the model rig.</div>
+  <div class="field"><div class="fieldHead"><span>Breast Size</span><output id="breastSizeOut">1.00×</output></div><input id="breastSize" type="range" min="0.75" max="1.35" step="0.01" value="1"></div>
+  <div class="field"><div class="fieldHead"><span>Width</span><output id="breastWidthOut">1.00×</output></div><input id="breastWidth" type="range" min="0.80" max="1.30" step="0.01" value="1"></div>
+  <div class="field"><div class="fieldHead"><span>Depth</span><output id="breastDepthOut">1.00×</output></div><input id="breastDepth" type="range" min="0.80" max="1.30" step="0.01" value="1"></div>
+  <div class="actions"><button class="secondary" id="resetBreast">Reset Breast Controls</button></div>
+  <div class="advancedHint">This uses chest/upper-chest bone scaling rather than vertex sculpting; adjacent torso or clothing may deform. Preview only.</div>
+ </div>
  <div id="chibiPanel">
   <div class="field"><div class="fieldHead"><span>Head size</span><output id="headOut">1.30×</output></div><input id="head" type="range" min="1" max="1.65" step=".01" value="1.30"></div>
   <div class="field"><div class="fieldHead"><span>Torso length</span><output id="torsoOut">0.82×</output></div><input id="torso" type="range" min=".65" max="1" step=".01" value=".82"></div>
@@ -177,6 +186,13 @@ function mirrorSelectedBone(){
  const v=readBoneEdit(name);v.p[0]*=-1;v.r[1]*=-1;v.r[2]*=-1;boneEdits.set(other,v);applyValues();
  document.querySelector('#limbSide').value=side==='left'?'right':'left';showBoneEdit();
 }
+function applyBreastControls(){
+ const size=Number(document.querySelector('#breastSize').value),width=Number(document.querySelector('#breastWidth').value),depth=Number(document.querySelector('#breastDepth').value);
+ for(const name of ['chest','upperChest']){
+  const b=bone(name),base=baseScales.get(name);if(!b||!base)continue;
+  b.scale.set(base.x*size*width,base.y*size,base.z*size*depth);
+ }
+}
 function applyValues(){
  if(!currentVRM)return;restore();
  let h,t,l,a,e;
@@ -184,7 +200,7 @@ function applyValues(){
  else{h=+document.querySelector('#adultHead').value;t=+document.querySelector('#adultTorso').value;l=+document.querySelector('#adultLegs').value;a=+document.querySelector('#adultArms').value;e=+document.querySelector('#adultEyes').value}
  // Edit the raw humanoid bones used by the model's actual skin skeleton. Normalized bones are for retargeting, not mesh deformation.
  // Do not scale the whole avatar root: tail, hair, ears and props keep their own transforms.
- scaleHead(h);scaleEyes(e);
+ scaleHead(h);scaleEyes(e);applyBreastControls();
  for(const n of ['chest','upperChest','neck','head'])scaleSegmentOffset(n,t);
  for(const side of ['left','right']){
    scaleSegmentOffset(side+'UpperLeg',l);
@@ -233,8 +249,13 @@ document.querySelector('#chibiTab').onclick=()=>setMode('chibi');document.queryS
 document.querySelectorAll('input[type=range]').forEach(el=>el.addEventListener('input',()=>{updateOutputs();applyValues()}));
 document.querySelectorAll('[data-head]').forEach(btn=>btn.onclick=()=>{document.querySelector('#head').value=btn.dataset.head;document.querySelector('#torso').value=btn.dataset.torso;document.querySelector('#legs').value=btn.dataset.legs;updateOutputs();applyValues()});
 document.querySelectorAll('[data-adult]').forEach(btn=>btn.onclick=()=>{const p=btn.dataset.adult,vals=p==='petite'?[.98,1.02,1.02,1]:p==='tall'?[.92,1.18,1.28,1.05]:p==='normal'?[.95,1.1,1.15,1.05]:[1,1,1,1];['adultHead','adultTorso','adultLegs','adultArms'].forEach((id,i)=>document.getElementById(id).value=vals[i]);updateOutputs();applyValues()});
-document.querySelector('#reset').onclick=()=>{if(!currentVRM)return;boneEdits.clear();document.querySelector('#chin').value=0;document.querySelector('#chinOut').value='0%';applyChin();restore();for(const [id,val] of Object.entries({head:1.3,torso:.82,legs:.75,arms:.85,eyes:1,adultHead:.95,adultTorso:1.1,adultLegs:1.15,adultArms:1.05,adultEyes:1}))document.getElementById(id).value=val;updateOutputs();setStatus('Editor controls have been reset.');applyValues()};
+document.querySelector('#reset').onclick=()=>{if(!currentVRM)return;boneEdits.clear();document.querySelector('#chin').value=0;document.querySelector('#chinOut').value='0%';applyChin();restore();for(const [id,val] of Object.entries({head:1.3,torso:.82,legs:.75,arms:.85,eyes:1,breastSize:1,breastWidth:1,breastDepth:1,adultHead:.95,adultTorso:1.1,adultLegs:1.15,adultArms:1.05,adultEyes:1}))document.getElementById(id).value=val;updateOutputs();for(const id of ['breastSizeOut','breastWidthOut','breastDepthOut'])document.getElementById(id).value='1.00×';setStatus('Editor controls have been reset.');applyValues()};
 document.querySelector('#center').onclick=fitModel;
+document.querySelectorAll('#breastSize,#breastWidth,#breastDepth').forEach(el=>el.addEventListener('input',()=>{
+ for(const id of ['breastSize','breastWidth','breastDepth'])document.getElementById(id+'Out').value=Number(document.getElementById(id).value).toFixed(2)+'×';
+ applyValues();
+}));
+document.querySelector('#resetBreast').onclick=()=>{for(const id of ['breastSize','breastWidth','breastDepth'])document.getElementById(id).value=1;for(const id of ['breastSizeOut','breastWidthOut','breastDepthOut'])document.getElementById(id).value='1.00×';applyValues()};
 updateOutputs();showBoneEdit();
 
 
